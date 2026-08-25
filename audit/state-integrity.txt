@@ -1,0 +1,3 @@
+central_app_state.json hash before tests: 0da904b81281ef054035c37848973e4897fef4237bee7d02ead184b12c6d63e9
+central_app_state.json hash after tests: 0da904b81281ef054035c37848973e4897fef4237bee7d02ead184b12c6d63e9
+Status: INTEGRITY OK - The central application state file remains completely untouched.

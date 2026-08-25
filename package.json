@@ -1,0 +1,49 @@
+{
+  "name": "react-example",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "test": "tsx scripts/run-tests.ts",
+    "test:auth": "tsx src/tests/serverAuthBoundary.test.ts && tsx src/tests/authSessionService.test.ts && tsx src/tests/serverSensitiveAuthBoundary.test.ts && tsx src/tests/sensitiveReauthService.test.ts && tsx src/tests/phoneMfaEnrollmentService.test.ts && tsx src/tests/secureLoginPanel.test.tsx",
+    "test:login-panel": "tsx src/tests/secureLoginPanel.test.tsx",
+    "test:phone-mfa": "tsx src/tests/phoneMfaEnrollmentService.test.ts",
+    "test:sensitive-auth": "tsx src/tests/serverSensitiveAuthBoundary.test.ts",
+    "test:sensitive-reauth": "tsx src/tests/sensitiveReauthService.test.ts",
+    "test:accounting": "tsx src/tests/accounting.test.ts",
+    "test:invoice-void": "tsx src/tests/serverInvoiceVoid.test.ts",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "start": "node dist/server.cjs",
+    "clean": "rm -rf dist server.js",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google/genai": "^2.4.0",
+    "@supabase/supabase-js": "^2.110.7",
+    "@tailwindcss/vite": "^4.1.14",
+    "@vitejs/plugin-react": "^5.0.4",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "html5-qrcode": "^2.3.8",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "multer": "^2.2.0",
+    "react": "^19.0.1",
+    "react-barcode": "^1.6.1",
+    "react-dom": "^19.0.1",
+    "vite": "^6.2.3",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/multer": "^2.2.0",
+    "@types/node": "^22.14.0",
+    "autoprefixer": "^10.4.21",
+    "esbuild": "^0.25.0",
+    "tailwindcss": "^4.1.14",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.3"
+  }
+}

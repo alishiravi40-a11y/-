@@ -1,0 +1,41 @@
+                    <div className="md:col-span-3">
+                      <label className="text-xs font-bold text-zinc-700 block mb-1">آدرس دقیق محل سکونت / شغل:</label>
+                      <input 
+                        type="text" 
+                        value={residenceAddress}
+                        onChange={e => setResidenceAddress(e.target.value)}
+                        placeholder="استان، شهر، خیابان..."
+                        className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-xs outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* RULE 4: ONLY "ثبت و مرحله بعد" & "مرحله قبل" & "انصراف" */}
+                  <div className="flex justify-between items-center pt-4 border-t border-zinc-200">
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={onClose}
+                        className="px-4 py-2 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition"
+                      >
+                        انصراف
+                      </button>
+                      <button 
+                        onClick={() => setWizardStep(1)}
+                        className="px-4 py-2 bg-zinc-200 text-zinc-800 rounded-xl text-xs font-bold hover:bg-zinc-300 transition"
+                      >
+                        مرحله قبل
+                      </button>
+                    </div>
+                    
+                    <button 
+                      onClick={() => setWizardStep(3)}
+                      className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition flex items-center gap-2 shadow-sm"
+                    >
+                      <span>ثبت و مرحله بعد</span>
+                      <ArrowLeft size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 3: UPLOAD DOCS */}

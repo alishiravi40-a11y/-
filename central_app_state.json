@@ -1,0 +1,1220 @@
+{
+  "users": [],
+  "persons": [],
+  "products": [],
+  "productCategories": [],
+  "subsidiaries": [
+    {
+      "id": "SUB_BANK_MELI",
+      "generalType": "بانک‌ها",
+      "groupType": "دارایی‌های جاری",
+      "name": "بانک ملی ایران",
+      "code": "10101"
+    },
+    {
+      "id": "SUB_BANK_MELI_INT",
+      "generalType": "اسناد در جریان وصول",
+      "groupType": "دارایی‌های جاری",
+      "name": "در جریان واریز بانک ملی",
+      "code": "1010199"
+    },
+    {
+      "id": "SUB_BANK_MELLAT",
+      "generalType": "بانک‌ها",
+      "groupType": "دارایی‌های جاری",
+      "name": "بانک ملت",
+      "code": "10102"
+    },
+    {
+      "id": "SUB_BANK_MELLAT_INT",
+      "generalType": "اسناد در جریان وصول",
+      "groupType": "دارایی‌های جاری",
+      "name": "در جریان واریز بانک ملت",
+      "code": "1010299"
+    },
+    {
+      "id": "SUB_BANK_SADERAT",
+      "generalType": "بانک‌ها",
+      "groupType": "دارایی‌های جاری",
+      "name": "بانک صادرات",
+      "code": "10103"
+    },
+    {
+      "id": "SUB_BANK_SADERAT_INT",
+      "generalType": "اسناد در جریان وصول",
+      "groupType": "دارایی‌های جاری",
+      "name": "در جریان واریز بانک صادرات",
+      "code": "1010399"
+    },
+    {
+      "id": "SUB_BANK_PARSIAN",
+      "generalType": "بانک‌ها",
+      "groupType": "دارایی‌های جاری",
+      "name": "بانک پارسیان",
+      "code": "10104"
+    },
+    {
+      "id": "SUB_BANK_PARSIAN_INT",
+      "generalType": "اسناد در جریان وصول",
+      "groupType": "دارایی‌های جاری",
+      "name": "در جریان واریز بانک پارسیان",
+      "code": "1010499"
+    },
+    {
+      "id": "SUB_BANK_REFAH",
+      "generalType": "بانک‌ها",
+      "groupType": "دارایی‌های جاری",
+      "name": "بانک رفاه",
+      "code": "10105"
+    },
+    {
+      "id": "SUB_BANK_REFAH_INT",
+      "generalType": "اسناد در جریان وصول",
+      "groupType": "دارایی‌های جاری",
+      "name": "در جریان واریز بانک رفاه",
+      "code": "1010599"
+    },
+    {
+      "id": "SUB_BANK_IRANZAMIN",
+      "generalType": "بانک‌ها",
+      "groupType": "دارایی‌های جاری",
+      "name": "بانک ایران زمین",
+      "code": "10106"
+    },
+    {
+      "id": "SUB_BANK_IRANZAMIN_INT",
+      "generalType": "اسناد در جریان وصول",
+      "groupType": "دارایی‌های جاری",
+      "name": "در جریان واریز بانک ایران زمین",
+      "code": "1010699"
+    },
+    {
+      "id": "SUB_CASH_MAIN",
+      "generalType": "صندوق‌ها",
+      "groupType": "دارایی‌های جاری",
+      "name": "صندوق اصلی",
+      "code": "10201"
+    },
+    {
+      "id": "SUB_CASH_SHOP",
+      "generalType": "صندوق‌ها",
+      "groupType": "دارایی‌های جاری",
+      "name": "صندوق فروشگاه",
+      "code": "10202"
+    },
+    {
+      "id": "SUB_DEBTORS",
+      "generalType": "بدهکاران تجاری",
+      "groupType": "دارایی‌های جاری",
+      "name": "حساب‌های دریافتنی (بدهکاران تجاری عادی)",
+      "code": "10301"
+    },
+    {
+      "id": "SUB_DEBTORS_INSTALLMENT",
+      "generalType": "بدهکاران تجاری",
+      "groupType": "دارایی‌های جاری",
+      "name": "اسناد دریافتنی (بدهکاران اقساطی)",
+      "code": "10302"
+    },
+    {
+      "id": "SUB_PARTNER_WALLET",
+      "generalType": "بدهکاران تجاری",
+      "groupType": "دارایی‌های جاری",
+      "name": "کیف پول اعتباری همکاران (تفصیلی)",
+      "code": "10303"
+    },
+    {
+      "id": "SUB_DEBTORS_AGENTS",
+      "generalType": "بدهکاران تجاری",
+      "groupType": "دارایی‌های جاری",
+      "name": "حساب‌های دریافتنی (نمایندگان فروش)",
+      "code": "10304"
+    },
+    {
+      "id": "SUB_BETA_SYSTEM",
+      "generalType": "بدهکاران تجاری",
+      "groupType": "دارایی‌های جاری",
+      "name": "حساب واسط سامانه بتا (بانک رفاه - قرارداد عقیلی)",
+      "code": "10305"
+    },
+    {
+      "id": "SUB_BETA_MEHDI",
+      "generalType": "بدهکاران تجاری",
+      "groupType": "دارایی‌های جاری",
+      "name": "حساب واسط سامانه بتا (بانک رفاه - قرارداد مهدی)",
+      "code": "10306"
+    },
+    {
+      "id": "SUB_BETA_MANSOURI",
+      "generalType": "بدهکاران تجاری",
+      "groupType": "دارایی‌های جاری",
+      "name": "حساب واسط سامانه بتا (بانک رفاه - قرارداد منصوری)",
+      "code": "10307"
+    },
+    {
+      "id": "SUB_BETA_HAMID",
+      "generalType": "بدهکاران تجاری",
+      "groupType": "دارایی‌های جاری",
+      "name": "حساب واسط سامانه بتا (بانک رفاه - قرارداد حمید)",
+      "code": "10308"
+    },
+    {
+      "id": "SUB_BETA_JAFARI",
+      "generalType": "بدهکاران تجاری",
+      "groupType": "دارایی‌های جاری",
+      "name": "حساب واسط سامانه بتا (بانک رفاه - قرارداد جعفری)",
+      "code": "10309"
+    },
+    {
+      "id": "SUB_CHECKS_REC",
+      "generalType": "اسناد دریافتنی",
+      "groupType": "دارایی‌های جاری",
+      "name": "اسناد دریافتنی (چک‌های صندوق)",
+      "code": "10401"
+    },
+    {
+      "id": "SUB_CHECKS_TRANSIT",
+      "generalType": "اسناد در جریان وصول",
+      "groupType": "دارایی‌های جاری",
+      "name": "اسناد در جریان وصول (واگذار شده)",
+      "code": "10402"
+    },
+    {
+      "id": "SUB_INVENTORY",
+      "generalType": "موجودی کالا",
+      "groupType": "دارایی‌های جاری",
+      "name": "موجودی کالا (انبار)",
+      "code": "10501"
+    },
+    {
+      "id": "SUB_PRE_PAY",
+      "generalType": "پیش‌پرداخت‌ها",
+      "groupType": "دارایی‌های جاری",
+      "name": "پیش‌پرداخت‌ها",
+      "code": "10601"
+    },
+    {
+      "id": "SUB_VAT_BUY",
+      "generalType": "پیش‌پرداخت‌ها",
+      "groupType": "دارایی‌های جاری",
+      "name": "مالیات بر ارزش افزوده خرید",
+      "code": "10602"
+    },
+    {
+      "id": "SUB_CHECKS_PAY",
+      "generalType": "اسناد پرداختنی",
+      "groupType": "بدهی‌های جاری",
+      "name": "اسناد پرداختنی (چک‌های صادرشده)",
+      "code": "20101"
+    },
+    {
+      "id": "SUB_CREDITORS",
+      "generalType": "بستانکاران تجاری",
+      "groupType": "بدهی‌های جاری",
+      "name": "حساب‌های پرداختنی (بستانکاران)",
+      "code": "20201"
+    },
+    {
+      "id": "SUB_PRE_REC",
+      "generalType": "پیش‌دریافت‌ها",
+      "groupType": "بدهی‌های جاری",
+      "name": "پیش‌دریافت‌ها",
+      "code": "20301"
+    },
+    {
+      "id": "SUB_VAT_SELL",
+      "generalType": "پیش‌دریافت‌ها",
+      "groupType": "بدهی‌های جاری",
+      "name": "مالیات بر ارزش افزوده فروش",
+      "code": "20302"
+    },
+    {
+      "id": "SUB_EQUITY",
+      "generalType": "سرمایه",
+      "groupType": "حقوق صاحبان سهام",
+      "name": "سرمایه اولیه",
+      "code": "50101"
+    },
+    {
+      "id": "SUB_REVENUE",
+      "generalType": "فروش کالا",
+      "groupType": "درآمدها",
+      "name": "فروش کالا و خدمات",
+      "code": "60101"
+    },
+    {
+      "id": "SUB_COMMISSION_REV",
+      "generalType": "درآمد کارمزد",
+      "groupType": "درآمدها",
+      "name": "درآمد کارمزد فروش اقساطی",
+      "code": "60102"
+    },
+    {
+      "id": "SUB_COGS",
+      "generalType": "بهای تمام شده کالای فروش رفته",
+      "groupType": "هزینه‌ها",
+      "name": "بهای تمام شده کالای فروش رفته",
+      "code": "70101"
+    },
+    {
+      "id": "SUB_EXP_SALARY",
+      "generalType": "هزینه‌های عمومی و اداری",
+      "groupType": "هزینه‌ها",
+      "name": "هزینه حقوق و دستمزد",
+      "code": "70201"
+    },
+    {
+      "id": "SUB_EXP_BILLS",
+      "generalType": "هزینه‌های عمومی و اداری",
+      "groupType": "هزینه‌ها",
+      "name": "هزینه قبوض (آب و برق و تلفن)",
+      "code": "70202"
+    },
+    {
+      "id": "SUB_EXP_RENT",
+      "generalType": "هزینه‌های عمومی و اداری",
+      "groupType": "هزینه‌ها",
+      "name": "هزینه اجاره غرفه/فروشگاه",
+      "code": "70203"
+    },
+    {
+      "id": "SUB_EXP_CATERING",
+      "generalType": "هزینه‌های عمومی و اداری",
+      "groupType": "هزینه‌ها",
+      "name": "هزینه چای، پذیرایی و آبدارخانه",
+      "code": "70205"
+    },
+    {
+      "id": "SUB_EXP_TRANSPORT",
+      "generalType": "هزینه‌های عمومی و اداری",
+      "groupType": "هزینه‌ها",
+      "name": "هزینه باربری و حمل و نقل",
+      "code": "70206"
+    },
+    {
+      "id": "SUB_EXP_MISC",
+      "generalType": "هزینه‌های عمومی و اداری",
+      "groupType": "هزینه‌ها",
+      "name": "سایر هزینه‌های عمومی و اداری",
+      "code": "70204"
+    },
+    {
+      "id": "SUB_REV_COMMISSION",
+      "generalType": "درآمد کارمزد",
+      "groupType": "درآمدها",
+      "name": "درآمد کارمزد فروش چکی و نسیه",
+      "code": "60201"
+    },
+    {
+      "id": "SUB_INVESTORS",
+      "generalType": "جاری شرکا و سرمایه‌گذاران",
+      "groupType": "حقوق صاحبان سهام",
+      "name": "جاری شرکا و سرمایه‌گذاران",
+      "code": "50102"
+    },
+    {
+      "id": "SUB_LIAB_LOANS",
+      "generalType": "تسهیلات دریافتی",
+      "groupType": "بدهی‌های غیرجاری",
+      "name": "تسهیلات و استقراض‌های دریافتی",
+      "code": "20401"
+    },
+    {
+      "id": "SUB_EXP_FIN_INTEREST",
+      "generalType": "هزینه‌های مالی",
+      "groupType": "هزینه‌ها",
+      "name": "هزینه مالی و بهره پرداختی (سود پول)",
+      "code": "70301"
+    },
+    {
+      "id": "SUB_INTEREST_INCOME",
+      "generalType": "درآمد کارمزد",
+      "groupType": "درآمدها",
+      "name": "درآمد حاصل از سود اقساط",
+      "code": "60103"
+    },
+    {
+      "id": "SUB_OPENING_BAL",
+      "generalType": "تراز افتتاحیه",
+      "groupType": "حقوق صاحبان سهام",
+      "name": "تراز افتتاحیه اول دوره",
+      "code": "99901"
+    }
+  ],
+  "vouchers": [],
+  "checks": [],
+  "invoices": [],
+  "openingBalances": [],
+  "installmentBooks": [],
+  "installments": [],
+  "installmentRequests": [],
+  "installmentPlans": [
+    {
+      "id": "beta",
+      "name": "طرح بتا (بازنشستگان)",
+      "interestRate": 2,
+      "penaltyRate": 4,
+      "maxTerm": 12,
+      "prepaymentPercent": 0,
+      "isActive": true
+    },
+    {
+      "id": "gold",
+      "name": "طرح وثیقه طلا",
+      "interestRate": 1.5,
+      "penaltyRate": 3,
+      "maxTerm": 24,
+      "prepaymentPercent": 10,
+      "isActive": true
+    },
+    {
+      "id": "partner",
+      "name": "ضمانت همکار",
+      "interestRate": 3,
+      "penaltyRate": 5,
+      "maxTerm": 10,
+      "prepaymentPercent": 20,
+      "isActive": true
+    }
+  ],
+  "warehouses": [],
+  "warehouseTransfers": [],
+  "costCenters": [],
+  "bankTerminals": [],
+  "auditLogs": [],
+  "businessPartners": [],
+  "partnerCreditRequests": [],
+  "creditFiles": [],
+  "creditPolicies": [
+    {
+      "id": "pol_1",
+      "title": "اعتبار خرد (تا ۵۰ میلیون تومان)",
+      "minAmount": 0,
+      "maxAmount": 50000000,
+      "needsValidation": true,
+      "needsBackSignature": false,
+      "needsCollateral": false,
+      "needsGuarantorInfo": false,
+      "needsGuarantorValidation": false,
+      "needsAmaniCheck": false,
+      "amaniReminderDays": 10,
+      "isActive": true
+    },
+    {
+      "id": "pol_2",
+      "title": "اعتبار متوسط (۵۰ تا ۲۰۰ میلیون تومان)",
+      "minAmount": 50000001,
+      "maxAmount": 200000000,
+      "needsValidation": true,
+      "needsBackSignature": true,
+      "needsCollateral": false,
+      "needsGuarantorInfo": true,
+      "needsGuarantorValidation": true,
+      "needsAmaniCheck": false,
+      "amaniReminderDays": 10,
+      "isActive": true
+    },
+    {
+      "id": "pol_3",
+      "title": "اعتبار کلان (بیش از ۲۰۰ میلیون تومان)",
+      "minAmount": 200000001,
+      "maxAmount": 5000000000,
+      "needsValidation": true,
+      "needsBackSignature": true,
+      "needsCollateral": true,
+      "needsGuarantorInfo": true,
+      "needsGuarantorValidation": true,
+      "needsAmaniCheck": true,
+      "amaniReminderDays": 10,
+      "isActive": true
+    }
+  ],
+  "partnerOrders": [],
+  "partnerSalesPlans": [],
+  "settings": {
+    "inventoryValuationMethod": "WEIGHTED_AVERAGE",
+    "defaultWarehouseId": "DEFAULT",
+    "companyName": "سیستم حسابداری هوشمند",
+    "calculatorAuditLogs": [
+      {
+        "actor": "مدیر سیستم",
+        "type": "agent_override",
+        "targetName": "نماینده: کاظم گوزار | ماشین‌حساب: ماشین حساب بتا - منصوری",
+        "changesSummary": "نرخ پایه اختصاصی: 7٪ (default_system) ⬅️ 4٪ (اختصاصی نماینده) | حداکثر تعداد اقساط: تعریف‌نشده ⬅️ 4 قسط | سقف اعتبار اختصاصی (ریال): نامحدود ⬅️ ۱٬۰۰۰٬۰۰۰ | وضعیت دسترسی نماینده: فعال ⬅️ مجاز / فعال",
+        "reason": "تغییر توسط مدیر",
+        "id": "log-1785735104245",
+        "timestampIso": "2026-08-03T05:31:44.245Z"
+      },
+      {
+        "actor": "مدیر سیستم",
+        "type": "agent_override",
+        "targetName": "نماینده: علی  نصیریان | ماشین‌حساب: طرح چکی صدی بازار",
+        "changesSummary": "نرخ پایه اختصاصی: 7٪ (default_system) ⬅️ 5٪ (اختصاصی نماینده) | حداکثر تعداد اقساط: تعریف‌نشده ⬅️ 4 قسط | سقف اعتبار اختصاصی (ریال): نامحدود ⬅️ ۱٬۰۰۰٬۰۰۰ | وضعیت دسترسی نماینده: فعال ⬅️ مجاز / فعال",
+        "reason": "تست عملکرد واقعه تنظیمات ماشین حساب",
+        "id": "log-1785671068655",
+        "timestampIso": "2026-08-02T11:44:28.655Z"
+      },
+      {
+        "id": "log-init-1",
+        "timestampIso": "2026-08-02T11:43:09.696Z",
+        "actor": "مدیر سیستم",
+        "type": "global_settings",
+        "targetName": "تنظیمات پایه نرخ‌ها",
+        "changesSummary": "ثبت اولین نسخه پیکربندی Resolver مرکزمحور ماشین‌حساب‌ها",
+        "reason": "راه‌اندازی معماری جدید مدیریت نرخ‌ها"
+      }
+    ]
+  },
+  "calculators": [
+    {
+      "id": "CALC_SADI",
+      "name": "ماشین حساب صدی بازار",
+      "description": "محاسبه اقساط بر اساس روال سنتی بازار (صدی) با چک صیادی",
+      "isActive": true,
+      "type": "sadi_bazaar"
+    },
+    {
+      "id": "CALC_PELKANI",
+      "name": "ماشین حساب پلکانی",
+      "description": "محاسبه اقساط به صورت پلکانی با افزایش مبلغ در هر بازه",
+      "isActive": true,
+      "type": "installment"
+    },
+    {
+      "id": "CALC_BETA_AGHILI",
+      "name": "ماشین حساب بتا - عقیلی",
+      "description": "محاسبه ویژه طرح بتا - بانک رفاه - قرارداد عقیلی",
+      "isActive": true,
+      "type": "beta",
+      "agentBankId": "SUB_BETA_SYSTEM",
+      "bankName": "بانک رفاه - قرارداد عقیلی"
+    },
+    {
+      "id": "CALC_BETA_MEHDI",
+      "name": "ماشین حساب بتا - مهدی",
+      "description": "محاسبه ویژه طرح بتا - بانک رفاه - قرارداد مهدی",
+      "isActive": true,
+      "type": "beta",
+      "agentBankId": "SUB_BETA_MEHDI",
+      "bankName": "بانک رفاه - قرارداد مهدی"
+    },
+    {
+      "id": "CALC_BETA_MANSOURI",
+      "name": "ماشین حساب بتا - منصوری",
+      "description": "محاسبه ویژه طرح بتا - بانک رفاه - قرارداد منصوری",
+      "isActive": true,
+      "type": "beta",
+      "agentBankId": "SUB_BETA_MANSOURI",
+      "bankName": "بانک رفاه - قرارداد منصوری"
+    },
+    {
+      "id": "CALC_BETA_HAMID",
+      "name": "ماشین حساب بتا - حمید",
+      "description": "محاسبه ویژه طرح بتا - بانک رفاه - قرارداد حمید",
+      "isActive": true,
+      "type": "beta",
+      "agentBankId": "SUB_BETA_HAMID",
+      "bankName": "بانک رفاه - قرارداد حمید"
+    },
+    {
+      "id": "CALC_BETA_JAFARI",
+      "name": "ماشین حساب بتا - جعفری",
+      "description": "محاسبه ویژه طرح بتا - بانک رفاه - قرارداد جعفری",
+      "isActive": true,
+      "type": "beta",
+      "agentBankId": "SUB_BETA_JAFARI",
+      "bankName": "بانک رفاه - قرارداد جعفری"
+    }
+  ],
+  "projectNotes": [],
+  "partnerSettlements": [],
+  "roles": [
+    {
+      "id": "role_super_admin",
+      "name": "مدیر ارشد",
+      "description": "دسترسی کامل به تمامی بخش‌های سیستم",
+      "isSystemRole": true,
+      "isActive": true,
+      "maximumDiscountPercent": 100,
+      "maximumCreditLimit": 1000000000000,
+      "createdAt": "2026-07-28T19:41:39.137Z",
+      "updatedAt": "2026-07-28T19:41:39.137Z"
+    },
+    {
+      "id": "role_seller",
+      "name": "فروشنده",
+      "description": "ثبت فاکتورهای فروش و مدیریت مشتریان کالا",
+      "isSystemRole": true,
+      "isActive": true,
+      "maximumDiscountPercent": 15,
+      "maximumCreditLimit": 500000000,
+      "createdAt": "2026-07-28T19:41:39.137Z",
+      "updatedAt": "2026-07-28T19:41:39.137Z"
+    },
+    {
+      "id": "role_stock_keeper",
+      "name": "انباردار",
+      "description": "مدیریت کالاها، انبارها و ورود و خروج کالا",
+      "isSystemRole": true,
+      "isActive": true,
+      "maximumDiscountPercent": 0,
+      "maximumCreditLimit": 0,
+      "createdAt": "2026-07-28T19:41:39.137Z",
+      "updatedAt": "2026-07-28T19:41:39.137Z"
+    },
+    {
+      "id": "role_visitor",
+      "name": "ویزیتور",
+      "description": "ثبت پیش‌فاکتور و پیگیری مشتریان",
+      "isSystemRole": true,
+      "isActive": true,
+      "maximumDiscountPercent": 5,
+      "maximumCreditLimit": 100000000,
+      "createdAt": "2026-07-28T19:41:39.137Z",
+      "updatedAt": "2026-07-28T19:41:39.137Z"
+    },
+    {
+      "id": "role_representative",
+      "name": "نماینده / فروشگاه طرف قرارداد",
+      "description": "ثبت اقساط، بارگذاری مدارک ضمانت و خریدهای اعتباری",
+      "isSystemRole": true,
+      "isActive": true,
+      "maximumDiscountPercent": 10,
+      "maximumCreditLimit": 2000000000,
+      "createdAt": "2026-07-28T19:41:39.137Z",
+      "updatedAt": "2026-07-28T19:41:39.137Z"
+    }
+  ],
+  "permissions": [
+    {
+      "id": "ViewAccountingReports",
+      "name": "مشاهده گزارش‌های حسابداری",
+      "description": "دسترسی به دفاتر روزنامه، کل، معین و تراز آزمایشی",
+      "category": "حسابداری"
+    },
+    {
+      "id": "CreateInvoice",
+      "name": "ثبت فاکتور خرید و فروش",
+      "description": "امکان صدور فاکتورهای جدید خرید و فروش",
+      "category": "فروش"
+    },
+    {
+      "id": "EditInvoice",
+      "name": "ویرایش فاکتور",
+      "description": "امکان ویرایش فاکتورهای صادر شده قبلی",
+      "category": "فروش"
+    },
+    {
+      "id": "DeleteInvoice",
+      "name": "حذف فاکتور",
+      "description": "امکان حذف فاکتورها و اسناد وابسته",
+      "category": "فروش"
+    },
+    {
+      "id": "ViewCostPrice",
+      "name": "مشاهده بهای تمام شده",
+      "description": "امکان مشاهده بهای تمام شده کالاها در انبار و گزارش‌ها",
+      "category": "حسابداری"
+    },
+    {
+      "id": "ViewProfit",
+      "name": "مشاهده سود زیان",
+      "description": "مشاهده میزان سود فاکتورها و سود ناخالص در گزارش‌ها",
+      "category": "حسابداری"
+    },
+    {
+      "id": "CreateWarehouseReceipt",
+      "name": "ثبت رسید انبار / موجودی اولیه",
+      "description": "امکان ثبت موجودی اولیه و حواله/رسید انبار",
+      "category": "انبارداری"
+    },
+    {
+      "id": "CreateCustomer",
+      "name": "ثبت و ویرایش مشتریان",
+      "description": "امکان تعریف مشتری جدید یا ویرایش اطلاعات افراد",
+      "category": "فروش"
+    },
+    {
+      "id": "CreateRepresentativeCustomer",
+      "name": "ثبت نماینده / همکار جدید",
+      "description": "امکان ثبت نمایندگان اعتباری یا فروشگاه‌های طرف قرارداد",
+      "category": "نمایندگی"
+    },
+    {
+      "id": "UploadRepresentativeDocuments",
+      "name": "بارگذاری اسناد و مدارک همکار",
+      "description": "امکان آپلود تصاویر مدارک و تضامین همکار",
+      "category": "نمایندگی"
+    },
+    {
+      "id": "AccessCreditPurchase",
+      "name": "دسترسی خرید اعتباری نماینده",
+      "description": "امکان خرید اعتباری توسط نماینده از کیف پول اختصاصی",
+      "category": "نمایندگی"
+    },
+    {
+      "id": "AccessInvestmentSales",
+      "name": "دسترسی فروش با سرمایه مجموعه",
+      "description": "امکان فروش مستقیم کالا از سرمایه اختصاصی مجموعه",
+      "category": "نمایندگی"
+    },
+    {
+      "id": "ManageUsersAndRoles",
+      "name": "مدیریت کاربران، نقش‌ها و مجوزها",
+      "description": "دسترسی کامل به مدیریت کاربران و انتساب نقش‌ها و سطوح دسترسی (RBAC)",
+      "category": "مدیریت سیستم"
+    }
+  ],
+  "rolePermissions": [
+    {
+      "roleId": "role_super_admin",
+      "permissionId": "ViewAccountingReports",
+      "allow": true
+    },
+    {
+      "roleId": "role_super_admin",
+      "permissionId": "CreateInvoice",
+      "allow": true
+    },
+    {
+      "roleId": "role_super_admin",
+      "permissionId": "EditInvoice",
+      "allow": true
+    },
+    {
+      "roleId": "role_super_admin",
+      "permissionId": "DeleteInvoice",
+      "allow": true
+    },
+    {
+      "roleId": "role_super_admin",
+      "permissionId": "ViewCostPrice",
+      "allow": true
+    },
+    {
+      "roleId": "role_super_admin",
+      "permissionId": "ViewProfit",
+      "allow": true
+    },
+    {
+      "roleId": "role_super_admin",
+      "permissionId": "CreateWarehouseReceipt",
+      "allow": true
+    },
+    {
+      "roleId": "role_super_admin",
+      "permissionId": "CreateCustomer",
+      "allow": true
+    },
+    {
+      "roleId": "role_super_admin",
+      "permissionId": "CreateRepresentativeCustomer",
+      "allow": true
+    },
+    {
+      "roleId": "role_super_admin",
+      "permissionId": "UploadRepresentativeDocuments",
+      "allow": true
+    },
+    {
+      "roleId": "role_super_admin",
+      "permissionId": "AccessCreditPurchase",
+      "allow": true
+    },
+    {
+      "roleId": "role_super_admin",
+      "permissionId": "AccessInvestmentSales",
+      "allow": true
+    },
+    {
+      "roleId": "role_super_admin",
+      "permissionId": "ManageUsersAndRoles",
+      "allow": true
+    },
+    {
+      "roleId": "role_seller",
+      "permissionId": "CreateInvoice",
+      "allow": true
+    },
+    {
+      "roleId": "role_seller",
+      "permissionId": "CreateCustomer",
+      "allow": true
+    },
+    {
+      "roleId": "role_seller",
+      "permissionId": "ViewAccountingReports",
+      "allow": false
+    },
+    {
+      "roleId": "role_seller",
+      "permissionId": "EditInvoice",
+      "allow": false
+    },
+    {
+      "roleId": "role_seller",
+      "permissionId": "DeleteInvoice",
+      "allow": false
+    },
+    {
+      "roleId": "role_seller",
+      "permissionId": "ViewCostPrice",
+      "allow": false
+    },
+    {
+      "roleId": "role_seller",
+      "permissionId": "ViewProfit",
+      "allow": false
+    },
+    {
+      "roleId": "role_seller",
+      "permissionId": "CreateWarehouseReceipt",
+      "allow": false
+    },
+    {
+      "roleId": "role_seller",
+      "permissionId": "CreateRepresentativeCustomer",
+      "allow": false
+    },
+    {
+      "roleId": "role_seller",
+      "permissionId": "UploadRepresentativeDocuments",
+      "allow": false
+    },
+    {
+      "roleId": "role_seller",
+      "permissionId": "AccessCreditPurchase",
+      "allow": false
+    },
+    {
+      "roleId": "role_seller",
+      "permissionId": "AccessInvestmentSales",
+      "allow": false
+    },
+    {
+      "roleId": "role_seller",
+      "permissionId": "ManageUsersAndRoles",
+      "allow": false
+    },
+    {
+      "roleId": "role_stock_keeper",
+      "permissionId": "CreateWarehouseReceipt",
+      "allow": true
+    },
+    {
+      "roleId": "role_stock_keeper",
+      "permissionId": "CreateInvoice",
+      "allow": false
+    },
+    {
+      "roleId": "role_stock_keeper",
+      "permissionId": "CreateCustomer",
+      "allow": false
+    },
+    {
+      "roleId": "role_stock_keeper",
+      "permissionId": "ViewAccountingReports",
+      "allow": false
+    },
+    {
+      "roleId": "role_stock_keeper",
+      "permissionId": "EditInvoice",
+      "allow": false
+    },
+    {
+      "roleId": "role_stock_keeper",
+      "permissionId": "DeleteInvoice",
+      "allow": false
+    },
+    {
+      "roleId": "role_stock_keeper",
+      "permissionId": "ViewCostPrice",
+      "allow": true
+    },
+    {
+      "roleId": "role_stock_keeper",
+      "permissionId": "ViewProfit",
+      "allow": false
+    },
+    {
+      "roleId": "role_stock_keeper",
+      "permissionId": "CreateRepresentativeCustomer",
+      "allow": false
+    },
+    {
+      "roleId": "role_stock_keeper",
+      "permissionId": "UploadRepresentativeDocuments",
+      "allow": false
+    },
+    {
+      "roleId": "role_stock_keeper",
+      "permissionId": "AccessCreditPurchase",
+      "allow": false
+    },
+    {
+      "roleId": "role_stock_keeper",
+      "permissionId": "AccessInvestmentSales",
+      "allow": false
+    },
+    {
+      "roleId": "role_stock_keeper",
+      "permissionId": "ManageUsersAndRoles",
+      "allow": false
+    },
+    {
+      "roleId": "role_visitor",
+      "permissionId": "CreateInvoice",
+      "allow": true
+    },
+    {
+      "roleId": "role_visitor",
+      "permissionId": "CreateCustomer",
+      "allow": true
+    },
+    {
+      "roleId": "role_visitor",
+      "permissionId": "ViewAccountingReports",
+      "allow": false
+    },
+    {
+      "roleId": "role_visitor",
+      "permissionId": "EditInvoice",
+      "allow": false
+    },
+    {
+      "roleId": "role_visitor",
+      "permissionId": "DeleteInvoice",
+      "allow": false
+    },
+    {
+      "roleId": "role_visitor",
+      "permissionId": "ViewCostPrice",
+      "allow": false
+    },
+    {
+      "roleId": "role_visitor",
+      "permissionId": "ViewProfit",
+      "allow": false
+    },
+    {
+      "roleId": "role_visitor",
+      "permissionId": "CreateWarehouseReceipt",
+      "allow": false
+    },
+    {
+      "roleId": "role_visitor",
+      "permissionId": "CreateRepresentativeCustomer",
+      "allow": false
+    },
+    {
+      "roleId": "role_visitor",
+      "permissionId": "UploadRepresentativeDocuments",
+      "allow": false
+    },
+    {
+      "roleId": "role_visitor",
+      "permissionId": "AccessCreditPurchase",
+      "allow": false
+    },
+    {
+      "roleId": "role_visitor",
+      "permissionId": "AccessInvestmentSales",
+      "allow": false
+    },
+    {
+      "roleId": "role_visitor",
+      "permissionId": "ManageUsersAndRoles",
+      "allow": false
+    },
+    {
+      "roleId": "role_representative",
+      "permissionId": "CreateInvoice",
+      "allow": true
+    },
+    {
+      "roleId": "role_representative",
+      "permissionId": "CreateCustomer",
+      "allow": true
+    },
+    {
+      "roleId": "role_representative",
+      "permissionId": "ViewAccountingReports",
+      "allow": false
+    },
+    {
+      "roleId": "role_representative",
+      "permissionId": "EditInvoice",
+      "allow": false
+    },
+    {
+      "roleId": "role_representative",
+      "permissionId": "DeleteInvoice",
+      "allow": false
+    },
+    {
+      "roleId": "role_representative",
+      "permissionId": "ViewCostPrice",
+      "allow": false
+    },
+    {
+      "roleId": "role_representative",
+      "permissionId": "ViewProfit",
+      "allow": false
+    },
+    {
+      "roleId": "role_representative",
+      "permissionId": "CreateWarehouseReceipt",
+      "allow": false
+    },
+    {
+      "roleId": "role_representative",
+      "permissionId": "CreateRepresentativeCustomer",
+      "allow": true
+    },
+    {
+      "roleId": "role_representative",
+      "permissionId": "UploadRepresentativeDocuments",
+      "allow": true
+    },
+    {
+      "roleId": "role_representative",
+      "permissionId": "AccessCreditPurchase",
+      "allow": true
+    },
+    {
+      "roleId": "role_representative",
+      "permissionId": "AccessInvestmentSales",
+      "allow": true
+    },
+    {
+      "roleId": "role_representative",
+      "permissionId": "ManageUsersAndRoles",
+      "allow": false
+    }
+  ],
+  "knowledgeCategories": [
+    {
+      "id": "cat_sales",
+      "title": "مدیریت فروش و فاکتورها",
+      "description": "آموزش‌های مربوط به ثبت و ویرایش انواع فاکتورها، سود فاکتور و بهای تمام‌شده",
+      "displayOrder": 1
+    },
+    {
+      "id": "cat_accounting",
+      "title": "حسابداری و اسناد مالی",
+      "description": "دفاتر مالی روزنامه و کل، تراز آزمایشی، کدهای تفصیلی و معین و اسناد دوبل",
+      "displayOrder": 2
+    },
+    {
+      "id": "cat_installments",
+      "title": "مدیریت فروش اقساطی",
+      "description": "فرآیند ثبت اقساط، طرح‌های اعتباری بتا/طلا و فرمول‌های محاسبه بهره و جرایم",
+      "displayOrder": 3
+    },
+    {
+      "id": "cat_checks",
+      "title": "مدیریت چک‌ها و اوراق بهادار",
+      "description": "ثبت، وصول، برگشت و واگذاری چک‌های صیادی و ثبت اسناد دریافتنی/پرداختنی",
+      "displayOrder": 4
+    },
+    {
+      "id": "cat_inventory",
+      "title": "انبارداری و موجودی کالا",
+      "description": "رسید ورود کالا، حواله خروج، کاردکس انبار و روش‌های ارزش‌گذاری کالا",
+      "displayOrder": 5
+    },
+    {
+      "id": "cat_reps",
+      "title": "مدیریت نمایندگان و همکاران",
+      "description": "کیف پول اعتباری، ثبت تضامین و مدارک همکار و ثبت پیش‌فاکتورها",
+      "displayOrder": 6
+    }
+  ],
+  "knowledgeArticles": [
+    {
+      "id": "art_sales_invoice",
+      "categoryId": "cat_sales",
+      "knowledgeCode": "INV-001",
+      "title": "ثبت فاکتور فروش",
+      "content": "برای ثبت فاکتور فروش جدید، ابتدا به بخش فاکتورها رفته و دکمه \"صدور فاکتور جدید\" را بزنید. سپس مشتری، انبار مرجع، و محصولات موردنظر را با تعداد و فی مشخص انتخاب کنید. سیستم به صورت خودکار سود فاکتور، بهای تمام‌شده بر اساس روش میانگین موزون یا FIFO و اسناد حسابداری مرتبط را محاسبه و پیش‌نویس می‌کند. در صورت تایید نهایی، سند مالی مربوطه صادر خواهد شد.",
+      "targetRoute": "invoices",
+      "searchKeywords": [
+        "فروش",
+        "فاکتور",
+        "فاکتور فروش",
+        "سود فاکتور",
+        "صادر"
+      ],
+      "isActive": true,
+      "createdAt": "2026-07-28T19:41:39.136Z",
+      "updatedAt": "2026-07-28T19:41:39.137Z"
+    },
+    {
+      "id": "art_check_deposit",
+      "categoryId": "cat_checks",
+      "knowledgeCode": "CHK-014",
+      "title": "ثبت چک دریافتی",
+      "content": "ثبت و پیگیری چک‌های دریافتی از مشتریان. چک‌های دریافتی به عنوان اسناد دریافتنی در وضعیت سررسید نشده ثبت می‌شوند. هنگام وصول یا واگذاری چک، وضعیت آن در سیستم به \"وصول شده\" تغییر می‌یابد و آرتیکل حسابداری متناظر صادر می‌شود.",
+      "targetRoute": "checks",
+      "searchKeywords": [
+        "چک",
+        "دریافتی",
+        "وصول",
+        "واگذاری",
+        "اسناد دریافتنی"
+      ],
+      "isActive": true,
+      "createdAt": "2026-07-28T19:41:39.137Z",
+      "updatedAt": "2026-07-28T19:41:39.137Z"
+    },
+    {
+      "id": "art_installment_cancel",
+      "categoryId": "cat_installments",
+      "knowledgeCode": "INS-023",
+      "title": "ابطال دفترچه اقساط",
+      "content": "در صورتی که مشتری تمایل به تسویه زودهنگام یا انصراف داشته باشد، می‌توانید نسبت به ابطال دفترچه اقساط اقدام کنید. ابطال دفترچه باعث لغو تراکنش‌های قسطی آینده و برگشت مانده بدهی به حساب معین مشتری می‌شود. آرتیکل‌های تعدیل کارمزد نیز صادر خواهند شد.",
+      "targetRoute": "installments",
+      "searchKeywords": [
+        "اقساط",
+        "دفترچه",
+        "ابطال",
+        "تسویه",
+        "انصراف"
+      ],
+      "isActive": true,
+      "createdAt": "2026-07-28T19:41:39.137Z",
+      "updatedAt": "2026-07-28T19:41:39.137Z"
+    },
+    {
+      "id": "art_rep_register",
+      "categoryId": "cat_reps",
+      "knowledgeCode": "REP-041",
+      "title": "ثبت نماینده و همکار جدید",
+      "content": "برای همکاری با فروشگاه‌های طرف قرارداد، ابتدا باید نماینده جدید در سیستم تعریف شود. پس از تعریف نماینده، می‌توانید مدارک ضمانت، سقف اعتبار اختصاصی و کیف پول اعتباری را تنظیم کنید. نمایندگان امکان خرید اعتباری از کیف پول را بر اساس مجوزها خواهند داشت.",
+      "targetRoute": "people",
+      "searchKeywords": [
+        "نماینده",
+        "همکار",
+        "کیف پول",
+        "اعتبار",
+        "مدارک"
+      ],
+      "isActive": true,
+      "createdAt": "2026-07-28T19:41:39.137Z",
+      "updatedAt": "2026-07-28T19:41:39.137Z"
+    },
+    {
+      "id": "art_stk_receipt",
+      "categoryId": "cat_inventory",
+      "knowledgeCode": "STK-051",
+      "title": "رسید ورود انبار",
+      "content": "عملیات ثبت رسید ورود کالا به انبار جهت افزایش موجودی فیزیکی و بهای تمام‌شده. این رسید معمولاً بر اساس فاکتور خرید یا انتقال بین انبارها صادر می‌شود. ارزش کالا در موجودی اولیه با ارزش کارشناسی یا فاکتور خرید تراز می‌گردد.",
+      "targetRoute": "warehouses",
+      "searchKeywords": [
+        "انبار",
+        "رسید",
+        "موجودی",
+        "کالا",
+        "ورود"
+      ],
+      "isActive": true,
+      "createdAt": "2026-07-28T19:41:39.137Z",
+      "updatedAt": "2026-07-28T19:41:39.137Z"
+    }
+  ],
+  "knowledgeSteps": [
+    {
+      "id": "step_sales_1",
+      "articleId": "art_sales_invoice",
+      "stepNumber": 1,
+      "title": "ورود به منوی فاکتورها",
+      "description": "از منوی کناری سمت راست، روی گزینه \"فاکتورها\" کلیک کنید."
+    },
+    {
+      "id": "step_sales_2",
+      "articleId": "art_sales_invoice",
+      "stepNumber": 2,
+      "title": "افزودن فاکتور فروش",
+      "description": "روی دکمه \"صدور فاکتور جدید\" در بالای صفحه کلیک کنید."
+    },
+    {
+      "id": "step_sales_3",
+      "articleId": "art_sales_invoice",
+      "stepNumber": 3,
+      "title": "انتخاب خریدار و محصولات",
+      "description": "نام خریدار را انتخاب کرده و ردیف‌های محصول را اضافه نمایید. تعداد و مبالغ را وارد کرده و روش تسویه را مشخص نمایید."
+    },
+    {
+      "id": "step_sales_4",
+      "articleId": "art_sales_invoice",
+      "stepNumber": 4,
+      "title": "ثبت و صدور سند حسابداری",
+      "description": "روی دکمه \"ذخیره فاکتور\" کلیک کنید تا فاکتور ثبت شده و سند مالی آن به طور خودکار صادر شود."
+    }
+  ],
+  "knowledgeErrors": [
+    {
+      "id": "err_sales_neg",
+      "errorCode": "ERR-STK-002",
+      "errorTitle": "خطای موجودی منفی انبار",
+      "cause": "موجودی فیزیکی محصول انتخابی در انبار مشخص شده کمتر از تعداد درخواستی در فاکتور است و گزینه \"جلوگیری از موجودی منفی\" در تنظیمات فعال است.",
+      "solution": "ابتدا موجودی محصول را از طریق \"رسید ورود انبار\" افزایش دهید یا انبار دیگری که کالا در آن موجود است را انتخاب کنید. همچنین می‌توانید موقتاً کنترل موجودی منفی را در تنظیمات سیستم غیرفعال نمایید.",
+      "articleId": "art_sales_invoice"
+    },
+    {
+      "id": "err_sales_credit",
+      "errorCode": "ERR-CRD-005",
+      "errorTitle": "تجاوز از سقف اعتبار مشتری",
+      "cause": "مجموع بدهی‌های فعلی مشتری به همراه مبلغ فاکتور جدید، از سقف اعتبار تعیین شده برای وی فراتر می‌رود.",
+      "solution": "در بخش مدیریت اشخاص سقف اعتبار مشتری را افزایش دهید یا از مشتری بخواهید بخشی از بدهی خود یا مبلغ فاکتور جدید را به صورت نقدی یا چک تسویه نماید.",
+      "articleId": "art_sales_invoice"
+    }
+  ],
+  "knowledgeGlossary": [
+    {
+      "id": "glo_1",
+      "term": "دفتر روزنامه",
+      "definition": "دفتری که در آن کلیه رویدادهای مالی و معاملات تجاری یک واحد اقتصادی به ترتیب تاریخ وقوع، بدهکار و بستانکار ثبت می‌شوند.",
+      "relatedTerms": [
+        "سند حسابداری",
+        "دفتر کل"
+      ]
+    },
+    {
+      "id": "glo_2",
+      "term": "بهای تمام شده کالای فروش رفته",
+      "definition": "مجموع هزینه‌های مستقیم مربوط به تولید یا خرید کالاهایی که در یک دوره مالی به فروش رسیده‌اند (بر اساس روش میانگین یا FIFO).",
+      "relatedTerms": [
+        "انبارداری",
+        "سود ناخالص"
+      ]
+    },
+    {
+      "id": "glo_3",
+      "term": "روش ارزیابی میانگین موزون",
+      "definition": "روشی برای محاسبه بهای تمام‌شده موجودی انبار که در آن ارزش کالای آماده برای فروش بر تعداد واحدهای موجود تقسیم می‌شود تا نرخ متوسط محاسبه شود.",
+      "relatedTerms": [
+        "انبار",
+        "بهای تمام شده"
+      ]
+    },
+    {
+      "id": "glo_4",
+      "term": "سقف اعتبار",
+      "definition": "حداکثر بدهی مجازی که یک مشتری یا نماینده می‌تواند در معاملات اعتباری و غیرنقدی نزد مجموعه داشته باشد.",
+      "relatedTerms": [
+        "نماینده",
+        "خرید اعتباری"
+      ]
+    }
+  ],
+  "knowledgeVersions": [
+    {
+      "id": "ver_1",
+      "articleId": "art_sales_invoice",
+      "version": "v1.2.0",
+      "compatibleAppVersion": "v2.4+",
+      "changeLog": "اضافه شدن سود ناخالص به ردیف‌های فاکتور و اعمال تخفیف بر اساس سقف تخفیف نقش کاربر."
+    }
+  ]
+}

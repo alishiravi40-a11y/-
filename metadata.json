@@ -1,0 +1,6 @@
+{
+  "name": "حسابداری دوبل همراه",
+  "description": "نرم‌افزار حسابداری دوبل (دوطرفه) علمی و زنجیروار با طراحی اختصاصی موبایل، مدیریت کالا، انبار، چک و گزارش‌های پیشرفته",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
