@@ -1,4 +1,4 @@
-# core — مدل داده هسته حسابداری (v0.2)
+# core — مدل داده هسته حسابداری (v0.3)
 
 `schema/001_core.sql` (PostgreSQL) — طراحی جایگزین ضعف‌های هلو. قواعد در **خود پایگاه داده** اعمال می‌شوند و با `tests/test_core_rules.py` اثبات شده‌اند:
 
@@ -27,4 +27,12 @@
 
 یادداشت استقرار: نقش برنامه نباید UPDATE مستقیم روی `period`، `fiscal_year`، `setting` و `user_permission` داشته باشد؛ توابع کنترل‌شده در تولید `SECURITY DEFINER` می‌شوند.
 
-باز: کدینگ اشخاص (D-03)؛ D-11.
+## v0.3 — D-11 و D-12 (`schema/003_below_cost_alerts.sql`، آزمون: `tests/test_alerts.py`)
+| تصمیم | قاعده اعمال‌شده در DB | آزمون |
+|---|---|---|
+| D-11 آخرین قیمت خرید | `below_cost_basis=last_purchase` (تغییر Audit‌شده)؛ `purchase_price` (بدون حذف و ویرایش؛ خرید باطل = ردیف معکوس) و `last_purchase_price(item, date)`؛ مقدار هنگام ثبت روی ردیف فروش ذخیره می‌شود؛ خرید پس از تاریخ فروش لحاظ نمی‌شود؛ فروش زیر میانگین ولی بالای آخرین خرید هشدار ندارد؛ نبود خرید قبلی = `cost_basis_missing` | `test_d11_*` |
+| D-12 سایت + ایمیل | حساب سرویس (`app_user.is_service`) در کانال `web` بدون توقف نهایی می‌کند. برای هر فاکتور: **یک** `below_cost_alert` با مهلت `below_cost_review_hours` و **یک** ردیف در `notification_outbox`. گیرندگان در تنظیم `below_cost_alert_emails` (با اعتبارسنجی، مجوز و Audit). هشدار حذف‌نشدنی است و فقط با `review_below_cost_alert` و مجوز `sales.below_cost_review` بررسی می‌شود. ایمیل ارسال‌شده غیرقابل تغییر است. `below_cost_alert_status` دیرکرد بررسی و ایمیل تحویل‌نشده را نشان می‌دهد. کاربر حضوری همچنان طبق D-06 | `test_d12_*` |
+
+استقرار: حساب سایت با `is_service=true` ساخته شود؛ Worker ایمیل: `python -m notifier.below_cost_mail --pg ... --loop 60`.
+
+باز: کدینگ اشخاص (D-03)؛ D-13 (آخرین خرید برای هر انبار جدا یا برای همان مدل).
