@@ -65,7 +65,41 @@ def p04_cheque_counts(sql, silver) -> dict:
     return _cmp("P-04 مبلغ چک‌ها به تفکیک جهت", holoo, ours, "CHQ-01")
 
 
-ALL = [p01_account_balances, p02_person_balances, p03_kardex, p04_cheque_counts]
+def _jalali_months(silver):
+    """Gregorian [start, end] of each Jalali month present in the vouchers (fiscal-year calendar)."""
+    import jdatetime
+    first, last = silver.execute("SELECT min(doc_date), max(doc_date) FROM voucher").fetchone()
+    j = jdatetime.date.fromgregorian(date=first).replace(day=1)
+    out = []
+    while j.togregorian() <= last:
+        nxt = (j.replace(day=28) + jdatetime.timedelta(days=5)).replace(day=1)
+        out.append((f"{j.year:04d}/{j.month:02d}", j.togregorian(), (nxt - jdatetime.timedelta(days=1)).togregorian()))
+        j = nxt
+    return out
+
+
+def p05_person_turnover_by_month(sql, silver) -> dict:
+    """Holoo function Calc_BedBes_UseInFuncDateBetween2 (person debit/credit turnover for a date range — basis of the
+    person account review and 4-column person report) for every Jalali month vs canonical."""
+    holoo, ours = {}, {}
+    for label, d1, d2 in _jalali_months(silver):
+        _, rows = query(sql, f"SELECT C_Code, SumBed, SumBes FROM Calc_BedBes_UseInFuncDateBetween2('{d1:%Y%m%d}', '{d2:%Y%m%d}')")
+        for c, bed, bes in rows:
+            holoo[(label, c, "debit")] = bed or 0.0
+            holoo[(label, c, "credit")] = bes or 0.0
+        for c, bed, bes in silver.execute("""
+            WITH pa AS (SELECT c_code, debit_account acc FROM person WHERE debit_account IS NOT NULL
+                        UNION SELECT c_code, credit_account FROM person WHERE credit_account IS NOT NULL)
+            SELECT pa.c_code, SUM(l.debit), SUM(l.credit)
+            FROM voucher_line l JOIN voucher v USING (sanad_code) JOIN pa ON pa.acc = l.account_code
+            WHERE l.in_ledger AND v.state NOT IN ('closing_temporary', 'closing') AND v.doc_date BETWEEN ? AND ?
+            GROUP BY 1""", [d1, d2]).fetchall():
+            ours[(label, c, "debit")] = bed or 0.0
+            ours[(label, c, "credit")] = bes or 0.0
+    return _cmp("P-05 گردش بدهکار/بستانکار ماهانه اشخاص = تابع هلو Calc_BedBes_UseInFuncDateBetween2", holoo, ours, "PER-03, ACC-15, ACC-16")
+
+
+ALL = [p01_account_balances, p02_person_balances, p03_kardex, p04_cheque_counts, p05_person_turnover_by_month]
 
 
 def run(sql, silver) -> list[dict]:

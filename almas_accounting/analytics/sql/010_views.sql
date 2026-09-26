@@ -157,3 +157,15 @@ SELECT source_db, fac_code, invoice_no, doc_date, doc_jdate, channel, user_code,
        COUNT(*) AS lines, SUM(qty * (last_purchase_basis - unit_price)) AS total_shortfall
 FROM analytics.sales_line_d11 WHERE below_last_purchase_d11
 GROUP BY source_db, fac_code, invoice_no, doc_date, doc_jdate, channel, user_code, person_code;
+
+-- 4-column trial balance per account and Jalali month: opening (before the month), debit, credit, closing.
+-- Closing entries (temporary/final) excluded, as in Holoo's person functions. Leaf-level; roll up with left(account_code, 3|7).
+CREATE OR REPLACE VIEW analytics.trial_balance_4col AS
+WITH m AS (
+  SELECT source_db, account_code, substr(doc_jdate, 1, 7) AS jmonth, SUM(debit) AS debit, SUM(credit) AS credit
+  FROM analytics.gl_line WHERE state NOT IN ('closing_temporary', 'closing') GROUP BY 1, 2, 3)
+SELECT source_db, account_code, jmonth,
+       coalesce(SUM(debit - credit) OVER w - (debit - credit), 0) AS opening,
+       debit, credit,
+       SUM(debit - credit) OVER w AS closing
+FROM m WINDOW w AS (PARTITION BY source_db, account_code ORDER BY jmonth ROWS UNBOUNDED PRECEDING);

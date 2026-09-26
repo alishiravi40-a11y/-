@@ -21,10 +21,10 @@
 
 | وضعیت آینده | تعداد |
 |---|---:|
-| READER_READY | 36 |
-| TODO | 27 |
+| READER_READY | 37 |
+| TODO | 25 |
 | DESIGNED | 17 |
-| VERIFIED | 9 |
+| VERIFIED | 10 |
 | IMPLEMENTED | 5 |
 
 ## حسابداری
@@ -45,8 +45,8 @@
 | ACC-12 | مانده حساب (دفتر کل/معین/تفصیلی) | `MandehOfSarfasl, W_SarfaslMandeh` | PROVEN | گزارش پرکاربرد | MUST | A | مانده هر حساب در هر تاریخ برابر | VERIFIED |
 | ACC-13 | Cache مانده حساب | `SARFASL.Mandeh` | PROVEN | فعال | NO | C | جایگزین: محاسبه/Materialized view با کنترل | DESIGNED |
 | ACC-14 | نسخه‌های سند افتتاحیه | `Sanad_Edit, snd_list_Edit` | PROVEN | 12 | MUST | B | همه نسخه‌ها Import و قابل مقایسه | READER_READY |
-| ACC-15 | دفتر روزنامه، دفتر معین، مرور حساب | `گزارش‌های هلو (Log A4)` | PROVEN | 143+13+8 اجرا | MUST | A | خروجی برای یک ماه نمونه با هلو برابر | TODO |
-| ACC-16 | ترازنامه آزمایشی ۲/۴/۶/۸ ستونی | `گزارش هلو` | PROVEN | 13 اجرا | MUST | A | تراز ۴ ستونی پایان سال برابر | TODO |
+| ACC-15 | دفتر روزنامه، دفتر معین، مرور حساب | `گزارش‌های هلو (Log A4)؛ تابع Calc_BedBes_UseInFuncDateBetween2` | PROVEN | 143+13+8 اجرا | MUST | A | P-05: گردش ماهانه بدهکار/بستانکار همه اشخاص = تابع خود هلو (31,588 مقدار، صفر اختلاف)؛ View analytics.trial_balance_4col | VERIFIED |
+| ACC-16 | ترازنامه آزمایشی ۲/۴/۶/۸ ستونی | `گزارش هلو (محاسبه در برنامه، نه در DB)` | PROVEN | 13 اجرا | MUST | A | analytics.trial_balance_4col؛ مانده پایان = P-01 (View هلو)؛ گردش دوره اشخاص = P-05؛ خروجی چاپی هلو برای مقایسه کامل لازم است | READER_READY |
 | ACC-17 | مرکز هزینه | `SND_LIST.MHaz_Code` | PROVEN | استفاده نشده | OPTIONAL | D | — | TODO |
 | ACC-18 | ارز | `SND_LIST.Bed_Arz/ArzId, MONEY` | PROVEN | استفاده نشده | OPTIONAL | D | — | TODO |
 | ACC-19 | حساب‌های انتظامی (چک ضمانت) | `001/002, TAZMIN` | PROVEN | 399 چک | MUST | A | مانده انتظامی = جمع TAZMIN باز | DESIGNED |
