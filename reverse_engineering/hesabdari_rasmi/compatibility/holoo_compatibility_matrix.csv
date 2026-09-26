@@ -1,0 +1,92 @@
+id,domain,capability,holoo_source,rule_evidence,proof,usage_1404,need,category,parity_test,future_status
+ACC-01,حسابداری,کدینگ سه‌سطحی کل/معین/تفصیلی,"SARFASL(Col,Moien,Tafzili,Sarfasl_Code,Parent,SParent)",طول 3/7/11؛ trigger trUpdatePerent,PROVEN,"33,564 حساب",MUST,B,همه کدها و نام‌ها و درخت پس از Import برابر؛ تعداد هر سطح,DESIGNED
+ACC-02,حسابداری,حساب شخص در سطح معین (کدینگ ترکیبی قدیمی),CUSTOMER.*_Bed/_Bes → SARFASL (len 7),"9,977 شخص روی معین",PROVEN,"9,977 شخص",MUST,B,نگاشت شخص↔حساب برای هر C_Code برابر؛ مانده هر شخص برابر,DESIGNED
+ACC-03,حسابداری,ماهیت حساب، گروه ترازنامه/سود و زیان,"SARFASL.Mahiat, Group → GROP_SAR",Group_Main 1/2/3,PROVEN,همه حساب‌ها,MUST,A,ترازنامه و سود و زیان بازسازی‌شده = سند بستن هلو,DESIGNED
+ACC-04,حسابداری,نقش سیستمی حساب‌ها (حساب پیش‌فرض عملیات),"SarfaslType(59), SARFASL.Type, MSETUP2 Sar*",59 نقش,PROVEN,فعال,MUST,B,هر نقش به همان حساب نگاشت شود,DESIGNED
+ACC-05,حسابداری,سند و ردیف سند (بدهکار/بستانکار),"SANAD, SND_LIST",بد=بس هر سند,PROVEN,"47,447 سند / 190,469 ردیف",MUST,A,C-01..C-02؛ جمع بد/بس هر سند و کل برابر,DESIGNED
+ACC-06,حسابداری,شماره ثابت + شماره عطف (بازشماره‌گذاری به ترتیب تاریخ),"SANAD.Sanad_Code, Sanad_Code_C/_C2",عطف مرتب شده؛ Log شماره موقت,PROVEN,فعال,MUST,B,هر دو شماره حفظ؛ ترتیب عطف = ترتیب تاریخ,DESIGNED
+ACC-07,حسابداری,انواع سند (فروش/خرید/دستی/دریافت/پرداخت/انتقال/چک/کارمزد),SANAD.Sanad_Type,11 نوع؛ الگوی حساب,PROVEN,فعال,MUST,A,توزیع انواع و الگوی حساب هر نوع برابر,DESIGNED
+ACC-08,حسابداری,نوع ردیف (F/S/Z/خالی) برای ارتباط ردیف با فاکتور و تسویه,SND_LIST.Type_Line,نمونه‌ها و شمارش,PROVEN,فعال,MUST,B,Type_Line هر ردیف حفظ و به نقش معنایی نگاشت,DESIGNED
+ACC-09,حسابداری,ردیف خارج از دفتر (Show_Daftar=0),SND_LIST.Show_Daftar,11 ردیف,PROVEN,11 ردیف,SHOULD,B,مانده‌ها با/بدون این ردیف‌ها برابر,TODO
+ACC-10,حسابداری,افتتاحیه/بستن موقت/اختتامیه,SANAD.sanad_state 1/2/3؛ حساب 005/006,اسناد 1، 371083، 371084,PROVEN,فعال,MUST,B,سند بستن بازتولیدشده = سند هلو (به‌جز خطای Q),DESIGNED
+ACC-11,حسابداری,موجودی ادواری و COGS در بستن سال,اسناد بستن + ARTICLE.Exist×Buy_Price,فرمول E06.2,PROVEN,فعال,MUST,B,"COGS=7,699,284,125,059 بازتولید شود",DESIGNED
+ACC-12,حسابداری,مانده حساب (دفتر کل/معین/تفصیلی),"MandehOfSarfasl, W_SarfaslMandeh",ΣBed−ΣBes,PROVEN,گزارش پرکاربرد,MUST,A,مانده هر حساب در هر تاریخ برابر,DESIGNED
+ACC-13,حسابداری,Cache مانده حساب,SARFASL.Mandeh,"33,451/33,470 منطبق",PROVEN,فعال,NO,C,جایگزین: محاسبه/Materialized view با کنترل,DESIGNED
+ACC-14,حسابداری,نسخه‌های سند افتتاحیه,"Sanad_Edit, snd_list_Edit",12 نسخه,PROVEN,12,MUST,B,همه نسخه‌ها Import و قابل مقایسه,DESIGNED
+ACC-15,حسابداری,دفتر روزنامه، دفتر معین، مرور حساب,گزارش‌های هلو (Log A4),استفاده در Log,PROVEN,143+13+8 اجرا,MUST,A,خروجی برای یک ماه نمونه با هلو برابر,TODO
+ACC-16,حسابداری,ترازنامه آزمایشی ۲/۴/۶/۸ ستونی,گزارش هلو,Log A4,PROVEN,13 اجرا,MUST,A,تراز ۴ ستونی پایان سال برابر,TODO
+ACC-17,حسابداری,مرکز هزینه,SND_LIST.MHaz_Code,0 ردیف,PROVEN,استفاده نشده,OPTIONAL,D,—,TODO
+ACC-18,حسابداری,ارز,"SND_LIST.Bed_Arz/ArzId, MONEY",0 ردیف,PROVEN,استفاده نشده,OPTIONAL,D,—,TODO
+ACC-19,حسابداری,حساب‌های انتظامی (چک ضمانت),"001/002, TAZMIN",مانده 0010002 = TAZMIN,PROVEN,399 چک,MUST,A,مانده انتظامی = جمع TAZMIN باز,DESIGNED
+ACC-20,حسابداری,کارتابل/تأیید/قطعی‌سازی سند,"SANAD.End_Save, Review, StateSanadForKartabl",همه 0,PROVEN,استفاده نشده,MUST,C,جایگزین: گردش تأیید + قفل دوره,DESIGNED
+ACC-21,حسابداری,کنترل پنجره زمانی ثبت سند برای کاربر,"USERDB.InsSanadBefor/SanadTimeInsertValueBefore, EnterPriorDate",مقادیر 90/120 روز,NEEDS_MORE_EVIDENCE,5 کاربر,MUST,C,جایگزین: قفل دوره + مجوز استثنا با Audit,DESIGNED
+PER-01,اشخاص,پرونده شخص (حقیقی/حقوقی، کد ملی، اقتصادی، آدرس، موبایل),"CUSTOMER, Cust_Tell, FactOther",—,PROVEN,"32,696 شخص",MUST,B,همه فیلدهای پرکاربرد Import و برابر,DESIGNED
+PER-02,اشخاص,نقش شخص (خریدار/فروشنده/واسطه/پرسنل/…),CUSTOMER.Kharid/Forosh/Vaseteh/…,پرچم‌ها تفکیک‌کننده نیستند,PROVEN,تقریباً همه,SHOULD,C,جایگزین: نقش استنتاجی از رفتار + نقش صریح,DESIGNED
+PER-03,اشخاص,دو حساب بدهکار/بستانکار برای هر شخص,"CUSTOMER.*_Bed/*_Bes, CustomerSarfasl",F_Union_BedBesCustomer,PROVEN,306 شخص دوحسابی/تک‌بستانکار,MUST,B,مانده شخص = اجتماع دو حساب,DESIGNED
+PER-04,اشخاص,مانده و گردش شخص,"W_Calc_Mandeh_Customer, F_Calc_BedBes_UseInView","بدون اسناد state 2,3",PROVEN,فعال,MUST,A,مانده هر شخص قبل از بستن برابر,DESIGNED
+PER-05,اشخاص,سقف اعتبار، مهلت تسویه,"CUSTOMER.Etebar, MohlatTasvieh",2 و 1 شخص,PROVEN,بسیار کم,SHOULD,C,جایگزین: سیاست اعتباری + امتیاز ریسک,DESIGNED
+PER-06,اشخاص,لیست سیاه,CUSTOMER.InListSiah (+ برچسب در نام),8 شخص + متن نام,PROVEN,8,MUST,B,همه لیست سیاه + نام‌های دارای «بد حساب» پرچم بخورند,DESIGNED
+PER-07,اشخاص,گروه پیامک,CUSTOMER.SMSGroup,"13,976 شخص",PROVEN,فعال,SHOULD,A,گروه‌ها Import شوند,TODO
+PER-08,اشخاص,شهر/منطقه شخص و گزارش فروش استان/شهر,CUSTOMER.City_Code→CITY,"32,678 شخص",PROVEN,4 اجرای گزارش,SHOULD,A,فروش به تفکیک شهر برابر,TODO
+PER-09,اشخاص,کشف اشخاص تکراری,—,"5,042 نام تکراری",PROVEN,—,SHOULD,C,قابلیت جدید: ادغام کنترل‌شده با حفظ سابقه,TODO
+SAL-01,فروش,فاکتور فروش (سرفصل + ردیف),FACTURE/FACTART Fac_Type=F,قاعده جمع و تسویه 100%,PROVEN,"19,877",MUST,A,C-09؛ جمع هر فاکتور، ردیف‌ها، روش تسویه برابر,DESIGNED
+SAL-02,فروش,روش‌های تسویه فاکتور (نقد/کارت/چک/نسیه),FNaghd/Card/FCheck/FNesieh,مجموع=مبلغ,PROVEN,همه,MUST,B,مجموع هر روش در سال برابر,DESIGNED
+SAL-03,فروش,سند خودکار فروش با ردیف‌های دریافت همان لحظه,Sanad_Type 13,الگو F/ /Z/S,PROVEN,همه,MUST,B,سند بازتولیدشده = سند هلو برای 100% فاکتورها,DESIGNED
+SAL-04,فروش,ثبت فروش از وب‌سرویس + شماره سفارش در شرح,Process (وب سرویس)، Fac_Comment «…/شماره»، UserCode=3,99.7% فروش,PROVEN,"20,083",MUST,B,شماره سفارش استخراج و یکتا؛ تطبیق با سامانه فروش,DESIGNED
+SAL-05,فروش,ابطال فاکتور فروش,Fac_Type Q + TaxLog SendType 3,سند برگشت نمی‌خورد,PROVEN,4,MUST,C,جایگزین: ابطال با سند معکوس خودکار + مؤدیان,DESIGNED
+SAL-06,فروش,برگشت از فروش,Fac_Type Y؛ سند 14,الگو 902/شخص/بانک,PROVEN,5,MUST,B,مبالغ و اثر انبار برابر,DESIGNED
+SAL-07,فروش,فاکتور اشانتیون (مبلغ صفر),F با Sum_Price=0,4 فاکتور,PROVEN,4,SHOULD,B,—,TODO
+SAL-08,فروش,تخفیف ردیف/فاکتور، پورسانت، واسطه,"DarsadTakhfif, Takhfif, DarsadPorsant, Vaseteh_Code",0 ردیف,PROVEN,استفاده نشده,OPTIONAL,D,—,TODO
+SAL-09,فروش,سطوح قیمت فروش (۱۰۰ سطح) و ArticlePrice,"ARTICLE.Sel_Price1..100, ArticlePrice",10 سطح در ArticlePrice,NEEDS_MORE_EVIDENCE,کم,SHOULD,C,جایگزین: فهرست قیمت نسخه‌دار,TODO
+SAL-10,فروش,پیش‌فاکتور,FBAILPRE/ABAILPRE (P),8,PROVEN,8,OPTIONAL,D,—,TODO
+SAL-11,فروش,حاشیه سود ردیف (بهای میانگین در ردیف),FACTART.Buy_Price,101 ردیف بهای صفر,PROVEN,فعال,MUST,C,جایگزین: بازمحاسبه بها پس از ثبت عقب‌افتاده,DESIGNED
+SAL-12,فروش,گزارش فاکتور ستونی/تیتر/خلاصه,گزارش هلو,390+41 اجرا,PROVEN,پرکاربردترین,MUST,A,خروجی ماه نمونه برابر,TODO
+SAL-13,فروش,بالاترین فروش به اشخاص/کالاها,گزارش هلو,38+10 اجرا,PROVEN,فعال,MUST,A,رتبه‌بندی برابر,TODO
+PUR-01,خرید,فاکتور خرید,FACTURE/FACTART K؛ سند 14,بد 801/بس 401,PROVEN,942,MUST,A,مبالغ، ردیف‌ها و اثر میانگین برابر,DESIGNED
+PUR-02,خرید,برگشت از خرید,X؛ سند 13,بد تأمین‌کننده/بس 802,PROVEN,1,MUST,A,برابر,DESIGNED
+PUR-03,خرید,اقلام خدماتی در فاکتور خرید (کارمزد/حمل),FACTART روی کالاهای 01xxx,2.22 میلیارد,PROVEN,فعال,SHOULD,C,جایگزین: هزینه‌های جانبی خرید با تسهیم,TODO
+PUR-04,خرید,بالاترین خرید از اشخاص,گزارش هلو,9 اجرا,PROVEN,فعال,SHOULD,A,برابر,TODO
+INV-01,کالا,کالا با کد ۷ رقمی گروه/زیرگروه/سریال,"ARTICLE, M_GROUP, S_GROUP",—,PROVEN,"9,607 کالا",MUST,B,کد و نام کالا برابر,DESIGNED
+INV-02,انبار,انبار = گروه اصلی؛ هر مدل در هر انبار کالای جدا,M_GROUP; حواله S/D,"3,717 جفت",PROVEN,20 گروه,MUST,C,جایگزین: کالای واحد × انبار؛ Import باید کالاهای هم‌نام را یکی کند,DESIGNED
+INV-03,انبار,حواله بین انبارها (بدون سند),FACTURE S/D,ارزش خنثی,PROVEN,482,MUST,B,مقدار و ارزش انتقال برابر,DESIGNED
+INV-04,انبار,موجودی = اول دوره + ورودی − خروجی,"ARTICLE.Exist, FACTART",100% کالاهای کالایی,PROVEN,فعال,MUST,A,C-07 / E11.1,DESIGNED
+INV-05,انبار,میانگین موزون متحرک,"ARTICLE.Buy_Price, FACTART.Buy_Price",91–94% شبیه‌سازی,PROVEN,فعال,MUST,B,ارزش پایان دوره هر کالا برابر؛ اختلاف‌ها توضیح داده شوند,DESIGNED
+INV-06,انبار,منع منفی شدن موجودی,MSETUP2.Negative_*,64 کالا منفی تاریخی,NEEDS_MORE_EVIDENCE,ناقص,MUST,C,جایگزین: کنترل منفی بر مبنای تاریخ مؤثر,DESIGNED
+INV-07,انبار,ضایعات,FACTURE Z؛ سند 6010006/8010001,3,PROVEN,3,MUST,B,برابر,DESIGNED
+INV-08,انبار,انبارگردانی,sp_AnbarGard*,0,PROVEN,استفاده نشده,MUST,C,قابلیت جدید با سند اصلاح موجودی,TODO
+INV-09,انبار,کاردکس مقداری و ریالی کالا,"W_ArtKardex*, گزارش هلو",Log A4,PROVEN,فعال,MUST,A,کاردکس یک کالای نمونه برابر,TODO
+INV-10,انبار,گزارش وضعیت انبار / موجودی به تفکیک انبار,گزارش هلو,Log A4,PROVEN,فعال,MUST,A,برابر,TODO
+INV-11,کالا,کد جایگزین/بارکد، شناسه مالیاتی کالا,"A_Code_C, ArticleCodes, A_codeIdTax","9,604 / 2,517",PROVEN,فعال,MUST,A,برابر,TODO
+INV-12,کالا,حداقل/حداکثر، محل نگهداری، تصویر، سریال، انقضا,"A_Min/A_Max, Place, Picture, ANB_SER, EXPDate",0,PROVEN,استفاده نشده,OPTIONAL,D,—,TODO
+INV-13,کالا,موجودی اول دوره منفی از سال قبل,ARTICLE.First_exist<0,12 کالا,PROVEN,12,MUST,C,Import باید هشدار دهد؛ سیستم جدید اجازه ندهد,DESIGNED
+TRE-01,خزانه,صندوق‌ها و تنخواه (درختی) با حساب چک صندوق,"Cash(Sarfasl_Code, Sarfasl_Code2)",8,PROVEN,5 صندوق,MUST,A,مانده صندوق‌ها برابر,DESIGNED
+TRE-02,خزانه,حساب‌های بانکی، POS، درگاه، شبا، کارمزد,"ACOUND_N, NEWBANK",98 حساب,PROVEN,فعال,MUST,B,همه حساب‌ها و مانده‌ها برابر,DESIGNED
+TRE-03,خزانه,دریافت (کارت/نقد/چک) و رسید,"سند 4/8/20, SaveResid","16,161 رسید",PROVEN,فعال,MUST,B,برابر,DESIGNED
+TRE-04,خزانه,پرداخت,سند 5,289,PROVEN,فعال,MUST,A,برابر,DESIGNED
+TRE-05,خزانه,انتقال بین بانک‌ها / واریز POS,سند 1,"4,734",PROVEN,فعال,MUST,A,برابر,DESIGNED
+TRE-06,خزانه,کارمزد بانکی,سند 7/20 → 6010009,7.75 میلیارد,PROVEN,فعال,MUST,A,برابر,DESIGNED
+TRE-07,خزانه,تسویه فاکتور نسیه (تخصیص دریافت به فاکتور),— (وجود ندارد),فقط متن شرح,PROVEN,ندارد,MUST,C,قابلیت جدید: تخصیص FIFO/دستی + سن‌بندی,DESIGNED
+TRE-08,خزانه,ریز عملکرد بانک,گزارش هلو,4 اجرا,PROVEN,فعال,MUST,A,برابر,TODO
+TRE-09,خزانه,اقساط,GHEST,22,PROVEN,کم,OPTIONAL,D,—,TODO
+CHQ-01,چک,چک دریافتی/پرداختی با بانک، شعبه، شماره، صیاد، صاحب,"Check, Check_Bkup","12,515",PROVEN,فعال,MUST,B,همه چک‌ها و مبالغ برابر,DESIGNED
+CHQ-02,چک,"تاریخچه وضعیت (D,J,V,R,B,S,M,P,O)",Check_Event,"35,824 رویداد",PROVEN,فعال,MUST,A,وضعیت پایانی هر چک برابر؛ E08.3,DESIGNED
+CHQ-03,چک,اسناد خودکار هر تغییر وضعیت,"Sanad_Type 0, SND_INDX J/V/M",الگوی حساب,PROVEN,فعال,MUST,A,تطبیق 104/402 با سیستم چک,DESIGNED
+CHQ-04,چک,خرج چک به شخص ثالث و برگشت از خرج,"V با SarFasl, S",466 مسیر,PROVEN,فعال,MUST,A,برابر,DESIGNED
+CHQ-05,چک,عودت/Undo وضعیت چک,Process EC «عودت…»,~850 عملیات,PROVEN,فعال,MUST,C,جایگزین: رویداد معکوس (نه حذف تاریخچه),DESIGNED
+CHQ-06,چک,پرچم‌های وضعیت در جدول Check,"Vosool, DarJaryan, …",ناسازگار با رویداد,PROVEN,—,NO,C,فقط از رویدادها مشتق شود,DESIGNED
+CHQ-07,چک,چک ضمانت/امانی,TAZMIN + 001/002,399,PROVEN,فعال,MUST,A,برابر,DESIGNED
+CHQ-08,چک,گزارش چک دریافتی/پرداختی، لیست چک‌ها,گزارش هلو,38+6+1 اجرا,PROVEN,فعال,MUST,A,برابر,TODO
+CHQ-09,چک,چک‌های افتتاحیه از سال قبل,SND_INDX A (Sanad 1),"6,535",PROVEN,فعال,MUST,A,برابر,DESIGNED
+TAX-01,مالیات,ارسال به سامانه مؤدیان و وضعیت,"FACTURE.StateTax/FTaxId/UId/SerialFact, TaxLog",SendType 1..6,PROVEN,"20,608 ارسال",MUST,B,وضعیت هر فاکتور برابر؛ تطبیق دفاتر↔مؤدیان,DESIGNED
+TAX-02,مالیات,ابطال در مؤدیان,TaxLog SendType 3,4,PROVEN,4,MUST,B,هم‌زمان با سند معکوس,DESIGNED
+TAX-03,مالیات,مالیات بر ارزش افزوده روی فاکتور,Sum_Levy/Sum_Scot/Levy/Scot,همه صفر,PROVEN,صفر,MUST,D,نیاز به تصمیم مالیاتی (قیمت شامل مالیات؟),TODO
+AUD-01,سوابق,Log عملیات کاربران با متن فارسی,Process,"108,730",PROVEN,فعال,MUST,B,همه ردیف‌ها Import؛ ترمیم Mojibake,DESIGNED
+AUD-02,سوابق,تصویر سند قبل از حذف/اصلاح (Blob ADTG),Process.Blob,"~45,000 Blob",PROVEN,فعال,MUST,B,Parser ADTG؛ بازسازی نسخه‌های سند,TODO
+AUD-03,سوابق,گزارش کلی عملیات سیستم,گزارش هلو,2 اجرا,PROVEN,کم,MUST,B,—,TODO
+SEC-01,امنیت,کاربران و ۲۱۱ مجوز,USERDB,16 کاربر,PROVEN,فعال,MUST,C,جایگزین: RBAC + احراز هویت امن؛ نگاشت مجوزهای کلیدی,DESIGNED
+SEC-02,امنیت,کاربر سرپرست و کاربر وب‌سرویس,"USERDB.SuperVizor, User 3",6 سرپرست,PROVEN,فعال,MUST,C,جایگزین: حساب سرویس با حداقل دسترسی,DESIGNED
+SYS-01,سیستم,تنظیمات برنامه (Key-Value),MSETUP/MSETUP2/MSETUP3,"7,320 کلید",PROVEN,فعال,SHOULD,C,فقط تنظیمات مؤثر بر داده Import شوند,TODO
+SYS-02,سیستم,پشتیبان‌گیری (محلی/DropBox) و ثبت آن,"BackInfo, Log A7",21,PROVEN,فعال,MUST,B,—,TODO
+SYS-03,سیستم,سال مالی = دیتابیس جدا (OldYear),نام DB holoo1_1404، مسیر OldYear,—,PROVEN,فعال,MUST,C,جایگزین: چندساله در یک پایگاه + قفل سال؛ Reader چند Backup,DESIGNED
+SYS-04,سیستم,طراحی چاپ فاکتور/چک/برچسب,"PRN_FACT, CHK_TARH, SETPRINT, LABEL, Set_TncRep",—,PROVEN,فعال,SHOULD,C,قالب‌های چاپ جدید,TODO
+SYS-05,سیستم,ماژول‌های بدون داده (تولید، امانی، طلا، اجاره، رستوران، گارانتی),"FAC_BILD, AB_CATCH, Gold*, VC_Facture, Res_*, Kh_*",0,PROVEN,استفاده نشده,NO,D,فقط Reader آماده شناسایی باشد,TODO
