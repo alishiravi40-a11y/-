@@ -31,6 +31,11 @@ Outputs in `--workdir` (keep **outside** the repository — contains personal an
 `python -m pytest -q` (unit). Golden tests against the real FY1404 import: `HOLOO_GOLDEN_WORKDIR=/secure/holoo_work python -m pytest -q`
 — they reproduce the proven figures (47,447 vouchers; ledger 80,720,660,543,371; COGS 7,699,284,125,059; profit 3,131,672,245; 14 hidden lines = voided invoices; cheque gap 200,000,000 …).
 
+## Parity with Holoo's own logic
+`holoo-reader parity --workdir DIR --sha256 SHA` runs Holoo's own views on the restored DB and compares them with the canonical model:
+P-01 `MandehOfSarfasl` (10,038 account balances), P-02 `W_Calc_Mandeh_Customer` (32,696 person balances),
+P-03 `W_ArtKardexWithoutAmani` (item movements), P-04 cheque amounts — **all exact on FY1404**.
+
 ## Current profile support
 | Profile | Evidence | Status |
 |---|---|---|
