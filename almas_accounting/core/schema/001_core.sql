@@ -91,7 +91,8 @@ DECLARE st text; eid bigint; a core.account;
 BEGIN
   eid := coalesce(NEW.entry_id, OLD.entry_id);
   SELECT status INTO st FROM core.journal_entry WHERE id = eid;
-  IF st IS DISTINCT FROM 'draft' THEN RAISE EXCEPTION 'lines of posted entry % are immutable', eid; END IF;
+  -- st IS NULL only while a (draft) entry is being deleted and its lines cascade; entry_no_delete guards posted ones
+  IF st IS NOT NULL AND st <> 'draft' THEN RAISE EXCEPTION 'lines of posted entry % are immutable', eid; END IF;
   IF TG_OP <> 'DELETE' THEN
     SELECT * INTO a FROM core.account WHERE id = NEW.account_id;
     IF NOT a.is_leaf THEN RAISE EXCEPTION 'account % is not a leaf', a.code; END IF;

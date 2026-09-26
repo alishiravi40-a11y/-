@@ -82,6 +82,12 @@ def test_posted_entry_is_immutable_and_undeletable(db):  # W-05
         db.execute("UPDATE core.journal_entry SET effective_date = '2025-06-02' WHERE id = %s", (eid,))
 
 
+def test_draft_entry_with_lines_can_be_deleted(db):
+    eid = entry(db, "2025-06-01", 3, SALE, post=False)
+    db.execute("DELETE FROM core.journal_entry WHERE id = %s", (eid,))
+    assert db.execute("SELECT count(*) FROM core.journal_line WHERE entry_id = %s", (eid,)).fetchone()[0] == 0
+
+
 def test_reversal_nets_to_zero_and_is_traceable(db):  # W-03 (void = reversal, not hidden lines)
     eid = entry(db, "2025-06-01", 3, SALE)
     rid = db.execute("SELECT core.reverse_entry(%s, '2025-06-05', 'invoice voided by customer request', 'test')", (eid,)).fetchone()[0]
