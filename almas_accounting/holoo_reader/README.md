@@ -31,6 +31,12 @@ Outputs in `--workdir` (keep **outside** the repository — contains personal an
 `python -m pytest -q` (unit). Golden tests against the real FY1404 import: `HOLOO_GOLDEN_WORKDIR=/secure/holoo_work python -m pytest -q`
 — they reproduce the proven figures (47,447 vouchers; ledger 80,720,660,543,371; COGS 7,699,284,125,059; profit 3,131,672,245; 14 hidden lines = voided invoices; cheque gap 200,000,000 …).
 
+## Publishing to PostgreSQL (`holoo_mirror`)
+`holoo-reader publish --workdir DIR --sha256 SHA --pg "$HOLOO_PG_DSN"` loads a completed import into schema `holoo_mirror`
+(one table per canonical entity, key = `source_db` + Holoo natural key, lineage columns `first_run/last_run/removed_run`,
+`holoo_mirror.change_log`, `holoo_mirror.import_run`). Re-publishing the same import changes nothing; a newer backup of the
+same database records `added / changed / removed_in_source` rows — rows are **never physically deleted**.
+
 ## Parity with Holoo's own logic
 `holoo-reader parity --workdir DIR --sha256 SHA` runs Holoo's own views on the restored DB and compares them with the canonical model:
 P-01 `MandehOfSarfasl` (10,038 account balances), P-02 `W_Calc_Mandeh_Customer` (32,696 person balances),

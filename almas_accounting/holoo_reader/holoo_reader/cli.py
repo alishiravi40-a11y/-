@@ -19,7 +19,17 @@ def main(argv=None):
     par = sub.add_parser("parity", help="compare Holoo's own views (restored DB) with the canonical model of a completed import")
     par.add_argument("--workdir", required=True)
     par.add_argument("--sha256", required=True, help="backup SHA-256 of the import")
+    pub = sub.add_parser("publish", help="publish a completed import into PostgreSQL schema holoo_mirror")
+    pub.add_argument("--workdir", required=True)
+    pub.add_argument("--sha256", required=True)
+    pub.add_argument("--pg", default=None, help="PostgreSQL DSN (default: $HOLOO_PG_DSN)")
     a = ap.parse_args(argv)
+    if a.cmd == "publish":
+        import os
+        from . import publish_pg
+        res = publish_pg.publish(os.path.join(a.workdir, "imports", a.sha256, "silver.duckdb"), a.pg or os.environ["HOLOO_PG_DSN"])
+        json.dump(res, sys.stdout, ensure_ascii=False, indent=1, default=str); print()
+        return 0
     if a.cmd == "parity":
         import os
         from . import parity, transform
