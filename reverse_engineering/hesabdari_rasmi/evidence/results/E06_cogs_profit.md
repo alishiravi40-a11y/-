@@ -1,7 +1,7 @@
 # E06_cogs_profit
 
 - DB: `holoo1_1404` — backup SHA-256 `c6784144353300b37343866715dcbb41530f262a95536c35807260a114bca2b2`
-- source: `evidence/sql/E06_cogs_profit.sql` (sha1 f1e0c5584f)
+- source: `evidence/sql/E06_cogs_profit.sql` (sha1 6b96efb31e)
 
 ## E06.1 — Temporary-account balances before closing (state 0/1 vouchers only)
 
@@ -14,7 +14,7 @@
 | 801 | خريد | 8,048,192,777,349 |
 | 802 | برگشت از خريد | -475,058,680 |
 | 803 | تخفيفات نقدي خريد | -207,125,483 |
-| 901 | درآمد عملياتي | -7,876,027,781,360 |
+| 901 | درآمد عملياتي | -7,875,445,781,360 |
 | 902 | برگشت از فروش | 1,101,720,000 |
 | 903 | تخفيفات نقدي فروش | 120,887,858 |
 
@@ -44,15 +44,15 @@ _5 row(s)_
 
 | net_sales | other_income | operating_expenses | non_operating_expenses |
 |---|---|---|---|
-| 7,874,805,173,502 | 233,048,742 | 122,316,447,397 | 49,723,977,543 |
+| 7,874,223,173,502 | 233,048,742 | 122,316,447,397 | 49,723,977,543 |
 
 _1 row(s)_
 
-## E06.5 — Net sales excluding voided (Q) invoice vouchers
+## E06.5 — Net sales: ledger view vs raw (difference = hidden voided-invoice lines)
 
-| net_901_excl_Q |
-|---|
-| 7,875,445,781,360 |
+| net_901_ledger | net_901_raw |
+|---|---|
+| 7,875,445,781,360 | 7,876,027,781,360 |
 
 _1 row(s)_
 

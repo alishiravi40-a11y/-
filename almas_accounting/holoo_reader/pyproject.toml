@@ -1,0 +1,25 @@
+[project]
+name = "holoo-reader"
+version = "0.1.0"
+description = "Independent reader for Holoo (TNC) SQL Server accounting backups: acquire, restore, profile, extract, normalize, validate, reconcile."
+requires-python = ">=3.10"
+dependencies = ["pymssql>=2.2", "duckdb>=1.0", "pyarrow>=14", "jdatetime>=5"]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+holoo-reader = "holoo_reader.cli:main"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["holoo_reader*"]
+
+[tool.setuptools.package-data]
+holoo_reader = ["canonical/*.sql"]
+
+[tool.pytest.ini_options]
+markers = ["golden: requires a restored Holoo FY1404 backup (set HOLOO_GOLDEN_WORKDIR)"]

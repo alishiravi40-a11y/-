@@ -1,4 +1,6 @@
 -- E01 — Voided sales invoices (Fac_Type='Q'): stock, ledger, closing, tax effects
+-- NOTE (round 3): voiding sets SND_LIST.Show_Daftar = 0 on every line of the invoice voucher; Holoo's ledger views
+-- (MandehOfSarfasl, W_SarfaslMandeh, F_Calc_BedBes_UseInView) only count Show_Daftar = 1. Ledger queries must apply it.
 
 -- @name: E01.1 | Q invoices header, payment split and linked voucher
 SELECT f.Fac_Code, f.Fac_Code_C, f.Fac_Date, f.C_Code, f.Sum_Price, f.Card, f.FNesieh, f.FCheck, f.FNaghd,
@@ -18,19 +20,25 @@ SELECT p.DateProc, p.User_Code, LEFT(p.Comment, 80) AS comment,
        CASE WHEN EXISTS (SELECT 1 FROM FACTURE q WHERE q.Fac_Type = 'Q' AND p.Comment LIKE '%' + CAST(q.Fac_Code_C AS varchar(20)) + '%') THEN 'still Q' ELSE 'NOT Q now' END AS now_state
 FROM Process p WHERE p.Comment LIKE N'%ابطال فاکتور%' OR p.Comment LIKE N'%ابطال فاكتور%' ORDER BY p.ID;
 
--- @name: E01.4 | Voucher lines of Q invoices still posted in the ledger
-SELECT l.Sanad_Code, l.Col_Code + l.Moien_Code + l.Tafzili_Code AS acc, l.Bed, l.Bes, l.Type_Line, LEFT(l.Comment_Line, 50) AS line
+-- @name: E01.4 | Voucher lines of Q invoices — all hidden from the ledger (Show_Daftar = 0)
+SELECT l.Sanad_Code, l.Col_Code + l.Moien_Code + l.Tafzili_Code AS acc, l.Bed, l.Bes, l.Type_Line, l.Show_Daftar, LEFT(l.Comment_Line, 50) AS line
 FROM SND_LIST l WHERE l.Sanad_Code IN (SELECT Sanad_Code FROM FACTURE WHERE Fac_Type = 'Q') ORDER BY l.Sanad_Code, l.[Index];
 
--- @name: E01.5 | Revenue still booked from Q vouchers (credit to 901)
-SELECT SUM(l.Bes) - SUM(l.Bed) AS revenue_from_voided
+-- @name: E01.5 | Q voucher revenue: raw vs in-ledger (Show_Daftar = 1)
+SELECT SUM(l.Bes) - SUM(l.Bed) AS revenue_raw, SUM(CASE WHEN l.Show_Daftar = 1 THEN l.Bes - l.Bed ELSE 0 END) AS revenue_in_ledger
 FROM SND_LIST l WHERE l.Col_Code = '901' AND l.Sanad_Code IN (SELECT Sanad_Code FROM FACTURE WHERE Fac_Type = 'Q');
 
--- @name: E01.6 | Accounts with balance after closing (should be empty)
-SELECT l.Col_Code + l.Moien_Code + l.Tafzili_Code AS acc, SUM(Bed) - SUM(Bes) AS bal
-FROM SND_LIST l GROUP BY l.Col_Code + l.Moien_Code + l.Tafzili_Code HAVING ABS(SUM(Bed) - SUM(Bes)) > 0.5;
+-- @name: E01.5b | Every hidden line (Show_Daftar = 0) in the database belongs to a Q voucher
+WITH q AS (SELECT DISTINCT Sanad_Code FROM FACTURE WHERE Fac_Type = 'Q')
+SELECT COUNT(*) hidden_lines, COUNT(q.Sanad_Code) hidden_in_Q_vouchers,
+       (SELECT COUNT(*) FROM SND_LIST x JOIN q q2 ON q2.Sanad_Code = x.Sanad_Code) all_lines_of_Q_vouchers
+FROM SND_LIST l LEFT JOIN q ON q.Sanad_Code = l.Sanad_Code WHERE l.Show_Daftar = 0;
 
--- @name: E01.7 | Same, excluding Q vouchers (expected: 0 rows)
+-- @name: E01.6 | Accounts with balance after closing — ledger view (Show_Daftar = 1); expected: 0 rows
+SELECT l.Col_Code + l.Moien_Code + l.Tafzili_Code AS acc, SUM(Bed) - SUM(Bes) AS bal
+FROM SND_LIST l WHERE l.Show_Daftar = 1 GROUP BY l.Col_Code + l.Moien_Code + l.Tafzili_Code HAVING ABS(SUM(Bed) - SUM(Bes)) > 0.5;
+
+-- @name: E01.7 | Same without the Show_Daftar filter but excluding Q vouchers (expected: 0 rows) — both views agree
 SELECT l.Col_Code + l.Moien_Code + l.Tafzili_Code AS acc, SUM(Bed) - SUM(Bes) AS bal
 FROM SND_LIST l LEFT JOIN (SELECT DISTINCT Sanad_Code sc FROM FACTURE WHERE Fac_Type = 'Q') q ON q.sc = l.Sanad_Code
 WHERE q.sc IS NULL GROUP BY l.Col_Code + l.Moien_Code + l.Tafzili_Code HAVING ABS(SUM(Bed) - SUM(Bes)) > 0.5;

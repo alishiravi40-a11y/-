@@ -4,11 +4,11 @@
 |---|---|---|---|
 | 1 | Restore و شناسایی Backup | مشخصات، هش، Restore سالم | ✅ انجام شد |
 | 2 | مهندسی معکوس عمیق | `REPORT_FA.md`، Inventory | ✅ انجام شد |
-| 3 | اثبات مستقل قواعد و یافته‌ها | `EVIDENCE_REVIEW_FA.md`، `evidence/` (E01–E11) | ✅ دور ۲ انجام شد |
+| 3 | اثبات مستقل قواعد و یافته‌ها | `EVIDENCE_REVIEW_FA.md`، `evidence/` (E01–E11) | ✅ دور ۲ و ۳ (دور ۳: اصلاح ابطال/Show_Daftar با آزمون Reader) |
 | 4 | نقشه قابلیت‌ها | `compatibility/` (۹۱ قابلیت) | ✅ نسخه ۱ |
 | 5 | ثبت ضعف‌ها | `WEAKNESS_REGISTER_FA.md` (۲۵ ضعف) | ✅ نسخه ۱ |
 | 6 | طراحی معماری و Reader | `ARCHITECTURE_FA.md`، `HOLOO_READER_FA.md` | ✅ v0.1 |
-| 7 | **پیاده‌سازی Holoo Backup Reader** | `holoo_reader/` + Golden tests روی ۱۴۰۴ | 🔄 در حال انجام |
+| 7 | **پیاده‌سازی Holoo Backup Reader** | `holoo_reader/` v0.1: Pipeline کامل، ۲۰ آزمون (شامل Golden روی ۱۴۰۴)، Idempotency اثبات‌شده | ✅ v0.1 — ادامه: Parser ADTG، Loader PostgreSQL |
 | 8 | تکمیل مجهولات با آزمایش | Parser ADTG؛ Backup ۱۴۰۳/۱۴۰۵؛ آزمایش کنترل‌شده روی هلو | ⏳ نیاز به D-09 |
 | 9 | Data platform و آینه | PostgreSQL `holoo_mirror`، Import مکرر | ⏳ |
 | 10 | داشبورد و کنترل‌های مدیریتی روی آینه | Controls engine + Analytics | ⏳ |
