@@ -1,0 +1,70 @@
+## E14.1 Beta-related accounts in the chart (dedicated branch 1080004 «مشتريان طرح بتا»; 4050006 payable «طرح هاي فروش اقساطي»)
+    code     |                    name                     
+-------------+---------------------------------------------
+ 1080004     | مشتريان طرح بتا
+ 4030004     | پيش دريافت کارمزد فروش اعتباري طرح ها
+ 4050006     | حساب هاي پرداختني-طرح هاي فروش اقساطي
+ 40500060001 | بازنشستگان تامين اجتماعي -طرح بتا رفاه بانک
+ 6010009     | هزينه كارمزد خدمات بانكي
+ 9070001     | بازنشستگان تامين اجتماعي(سامانه بتا)
+
+## E14.2 Where beta customers are coded (moein) and year-end receivable before closing
+  moein  | dedicated_branch | accounts | active |   balance   
+---------+------------------+----------+--------+-------------
+ 1030002 | f                |       22 |     22 |  3588584953
+ 1030008 | f                |      209 |    209 | 35702001944
+ 1030009 | f                |        8 |      8 |   797928294
+ 1036732 | f                |        1 |      1 |           0
+ 1080004 | t                |      157 |     69 | 23453162084
+ 9070001 | f                |        1 |      0 |           0
+
+## E14.3 Voucher shapes touching beta customers (BETA = beta customer; + debit, - credit; vouchers <= 12 lines)
+                  sig                   | vouchers 
+----------------------------------------+----------
+ 4010175- 4050006- 6010009+ BETA+       |      215
+ 9010001- BETA+                         |      211
+ 1020002+ 9010001- BETA+ BETA-          |       98
+ 1030008- BETA+                         |       40
+ 1020001+ BETA-                         |       21
+ 1020002+ BETA-                         |       14
+ 1020002+ 1030008- BETA-                |        6
+ 1030002- BETA+                         |        6
+ 1040001+ BETA-                         |        5
+ 1010001+ 1020002+ 9010001- BETA+ BETA- |        4
+
+## E14.4 Contract vouchers: customer debt, bank share recognised up front (6010009 Dr = 4050006 Cr)
+ contracts | customer_debt | bank_share_expensed | share_eq_payable | median_share_pct 
+-----------+---------------+---------------------+------------------+------------------
+       219 |   31110113890 |          3487567973 |              216 |            11.92
+
+## E14.5 Contracts per quarter by the moein the customer was coded in (inconsistent use of the dedicated branch)
+    q    |  moein  | contracts 
+---------+---------+-----------
+ 1404-Q1 | 1030008 |         2
+ 1404-Q1 | 1080004 |         1
+ 1404-Q2 | 1030008 |        33
+ 1404-Q2 | 1030009 |         2
+ 1404-Q3 | 1030002 |         1
+ 1404-Q3 | 1030008 |       117
+ 1404-Q3 | 1030009 |         1
+ 1404-Q4 | 1030002 |        12
+ 1404-Q4 | 1030008 |         3
+ 1404-Q4 | 1030009 |         1
+ 1404-Q4 | 1080004 |        46
+
+## E14.6 Installment collections (description «وصول قسط بتا--…»): batch vouchers, no installment number
+ lines | vouchers | customers |  collected  | with_installment_no 
+-------+----------+-----------+-------------+---------------------
+  1152 |      100 |       287 | 42914920851 |                   0
+
+## E14.7 Bank-share payable 4050006 in 1404: recognised vs cleared
+ recognised |  cleared  | clearing_lines | open_at_year_end 
+------------+-----------+----------------+------------------
+ 4512139782 | 202376315 |              5 |       4309763467
+
+## E14.8 Customer duplicated: beta person with another person record of the same (normalized) name
+ beta_persons | with_second_record 
+--------------+--------------------
+          397 |                 66
+
+## E14.9 Holoo installment module (SQL Server): GHEST = 22 installments of 3 customers, 0 marked collected; GhestGroup, CustomerGroup, GroupSarfasl = 0 rows
