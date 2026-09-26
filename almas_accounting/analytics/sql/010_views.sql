@@ -14,12 +14,26 @@ SELECT d.source_db, d.fiscal_year, d.fac_type, d.fac_code, d.number AS invoice_n
        d.person_code, d.channel, d.web_order_no, d.user_code, l.a_code, i.name AS item_name, split_part(i.name, '/', 1) AS brand,
        i.warehouse_code, w.name AS warehouse_name, l.qty, l.unit_price, l.unit_cost,
        l.qty * l.unit_price AS revenue, l.qty * l.unit_cost AS cost, l.qty * (l.unit_price - l.unit_cost) AS gross_margin,
-       (l.unit_price < l.unit_cost) AS below_cost, (l.unit_cost = 0) AS zero_cost
+       (l.unit_price < l.unit_cost) AS below_cost, (l.unit_cost = 0) AS zero_cost,
+       -- D-11: second purchase-price basis (last purchase before the sale); NULL = unknown, never guessed
+       l.unit_last_purchase_cost,
+       (l.unit_price < l.unit_last_purchase_cost) IS TRUE AS below_last_purchase,
+       (l.unit_price < l.unit_cost OR (l.unit_price < l.unit_last_purchase_cost) IS TRUE) AS below_either_basis
 FROM holoo_mirror.document d
 JOIN holoo_mirror.document_line l ON l.source_db = d.source_db AND l.fac_type = d.fac_type AND l.fac_code = d.fac_code AND l.removed_run IS NULL
 JOIN holoo_mirror.item i ON i.source_db = l.source_db AND i.a_code = l.a_code
 LEFT JOIN holoo_mirror.warehouse w ON w.source_db = i.source_db AND w.code = i.warehouse_code
 WHERE d.removed_run IS NULL AND d.kind = 'sale' AND NOT i.is_service;
+
+-- D-06 control 2: below-cost sales, traceable per month, user, channel and warehouse, under both purchase-price bases
+CREATE OR REPLACE VIEW analytics.below_cost_sales AS
+SELECT source_db, jmonth, user_code, channel, warehouse_name, COUNT(*) AS lines,
+       COUNT(*) FILTER (WHERE below_cost) AS below_moving_average,
+       SUM(CASE WHEN below_cost THEN qty * (unit_cost - unit_price) ELSE 0 END) AS shortfall_moving_average,
+       COUNT(*) FILTER (WHERE below_last_purchase) AS below_last_purchase,
+       SUM(CASE WHEN below_last_purchase THEN qty * (unit_last_purchase_cost - unit_price) ELSE 0 END) AS shortfall_last_purchase,
+       COUNT(*) FILTER (WHERE below_cost AND below_last_purchase) AS below_both
+FROM analytics.sales_line WHERE below_either_basis GROUP BY 1, 2, 3, 4, 5;
 
 CREATE OR REPLACE VIEW analytics.monthly_sales AS
 SELECT source_db, jmonth, COUNT(DISTINCT fac_code) invoices, SUM(qty) units, SUM(revenue) revenue, SUM(cost) cost, SUM(gross_margin) gross_margin,

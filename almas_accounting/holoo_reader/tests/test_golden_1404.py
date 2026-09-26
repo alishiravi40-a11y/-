@@ -102,3 +102,10 @@ def test_prior_year_web_sales_removed(con):
                     LEFT JOIN document d ON d.voucher_code = TRY_CAST(a.number AS INTEGER) AND d.kind IN ('sale','sale_voided')
                     WHERE a.kind = 'add' AND w.doc_type = 1 AND w.doc_date < DATE '2025-03-21' AND d.fac_code IS NULL""")
     assert n == 130
+
+
+def test_two_purchase_price_bases_on_sale_lines(con):   # E13 / D-11
+    q = "FROM document_line WHERE fac_type = 'F' AND left(a_code, 2) <> '01'"
+    assert con.execute(f"SELECT COUNT(*), COUNT(unit_last_purchase_cost) {q}").fetchone() == (29841, 24894)
+    assert con.execute(f"""SELECT COUNT(*) FILTER (WHERE unit_price < unit_cost), COUNT(*) FILTER (WHERE unit_price < unit_last_purchase_cost),
+                           COUNT(*) FILTER (WHERE unit_price < unit_cost OR unit_price < unit_last_purchase_cost) {q}""").fetchone() == (8078, 7001, 9562)

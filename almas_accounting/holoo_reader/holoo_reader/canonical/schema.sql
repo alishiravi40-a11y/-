@@ -37,7 +37,10 @@ CREATE TABLE document (
 
 CREATE TABLE document_line (
   fac_type VARCHAR, fac_code VARCHAR, a_code VARCHAR, line_index INTEGER, qty DOUBLE, unit_price DOUBLE,
-  unit_cost DOUBLE, line_discount DOUBLE, source_row_hash VARCHAR, PRIMARY KEY (fac_type, fac_code, a_code, line_index));
+  unit_cost DOUBLE,                -- FACTART.Buy_Price: moving weighted average cost at the time of the line
+  line_discount DOUBLE,
+  unit_last_purchase_cost DOUBLE,  -- FACTART.EndBuy_PriceK: last purchase price before the sale (NULL = none); see D-11
+  source_row_hash VARCHAR, PRIMARY KEY (fac_type, fac_code, a_code, line_index));
 
 CREATE TABLE voucher_link (sanad_code INTEGER, fac_type VARCHAR, fac_code VARCHAR, check_code INTEGER, source_row_hash VARCHAR);
 

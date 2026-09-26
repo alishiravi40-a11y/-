@@ -26,6 +26,7 @@ Outputs in `--workdir` (keep **outside** the repository — contains personal an
 - Re-importing the same backup (same SHA-256, any packaging) is a no-op (`status=duplicate`).
 - A newer backup of the same `source_db`/fiscal year produces a `source_change` diff (added / changed / removed_in_source) by stable Holoo keys.
 - Password columns are never extracted.
+- Reader upgrades are safe on an existing mirror: a canonical column added by a newer reader (e.g. v0.2 `document_line.unit_last_purchase_cost`) is added to `holoo_mirror` and back-filled from the same import, without being logged as a source change (`added_columns` in the publish result).
 
 ## Tests
 `python -m pytest -q` (unit). Golden tests against the real FY1404 import: `HOLOO_GOLDEN_WORKDIR=/secure/holoo_work python -m pytest -q`

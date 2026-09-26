@@ -7,6 +7,7 @@ from importlib import resources
 
 import duckdb
 import jdatetime
+import pyarrow.parquet as pq
 
 from . import textfix
 from .adapters import holoo_v1 as A
@@ -55,6 +56,10 @@ def build_silver(bronze_dir: str, silver_path: str, meta: dict) -> dict:
         p = os.path.join(bronze_dir, f"{t}.parquet")
         return f"read_parquet('{p}')" if os.path.exists(p) else None
 
+    def has(t, col):
+        p = os.path.join(bronze_dir, f"{t}.parquet")
+        return os.path.exists(p) and col in pq.read_schema(p).names
+
     def load(sql: str, *tables):
         if all(src(t) for t in tables):
             con.execute(sql.format(**{t: src(t) for t in tables}))
@@ -87,8 +92,10 @@ def build_silver(bronze_dir: str, silver_path: str, meta: dict) -> dict:
             coalesce(Sum_Price,0), coalesce(FNaghd,0), coalesce(Card,0), coalesce(FCheck,0), coalesce(FNesieh,0), coalesce(Takhfif,0),
             NULLIF(Sanad_Code,0), UserCode, CASE WHEN UserCode = {A.WEB_SERVICE_USER} THEN 'web_service' ELSE 'holoo_ui' END,
             order_no(Fac_Comment), StateTax, NULLIF(FTaxId,''), TRY_CAST(replace(DateUser,'/','-') AS DATE), clean(Fac_Comment), _row_hash FROM {{FACTURE}}""", "FACTURE")
-    load("""INSERT INTO document_line SELECT Fac_Type, Fac_Code, A_Code, A_Index, coalesce(Few_Article,0), coalesce(Price_BS,0),
-            coalesce(Buy_Price,0), coalesce(TakhfifSatriR,0), _row_hash FROM {FACTART}""", "FACTART")
+    # last purchase price before the sale (E13.3); 0 = none known → NULL. Optional column in older schema families.
+    last_purchase = "NULLIF(EndBuy_PriceK, 0)" if has("FACTART", "EndBuy_PriceK") else "NULL"
+    load(f"""INSERT INTO document_line SELECT Fac_Type, Fac_Code, A_Code, A_Index, coalesce(Few_Article,0), coalesce(Price_BS,0),
+            coalesce(Buy_Price,0), coalesce(TakhfifSatriR,0), {last_purchase}, _row_hash FROM {{FACTART}}""", "FACTART")
     load("INSERT INTO voucher_link SELECT Sanad_Code, NULLIF(Fac_Type,''), NULLIF(Fac_Code,''), NULLIF(Check_Code,0), _row_hash FROM {SND_INDX}", "SND_INDX")
     load("INSERT INTO cashbox SELECT Id, Parent_Id, S_Type, clean(S_Name), NULLIF(Sarfasl_Code,''), NULLIF(Sarfasl_Code2,''), _row_hash FROM {Cash}", "Cash")
     load("""INSERT INTO bank_account SELECT Id, C_Code, Bank_Code, Account_N, clean(Branch_Name), Col_Code || Moien_Code || Tafzili_Code,

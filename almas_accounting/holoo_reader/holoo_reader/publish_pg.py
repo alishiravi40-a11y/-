@@ -53,20 +53,28 @@ def ensure_table(pg, table, cols):
     pk = ", ".join(["source_db"] + [f'"{k}"' for k in keys])
     pg.execute(f"""CREATE TABLE IF NOT EXISTS holoo_mirror."{table}" (source_db text NOT NULL, fiscal_year integer, {coldefs},
                   source_row_hash text, first_run text, last_run text, removed_run text, PRIMARY KEY ({pk}))""")
+    # schema evolution: a canonical column added in a newer reader version is added to the mirror; the caller
+    # back-fills it on every row (the source hash is unchanged, so this is not logged as a source change)
+    have = {r[0] for r in pg.execute("SELECT column_name FROM information_schema.columns WHERE table_schema = 'holoo_mirror' "
+                                     "AND table_name = %s", (table,)).fetchall()}
+    added = [(c, t) for c, t in cols if c not in have]
+    for c, t in added:
+        pg.execute(f'ALTER TABLE holoo_mirror."{table}" ADD COLUMN "{c}" {_pg_type(t)}')
+    return [c for c, _ in added]
 
 
 def publish(silver_path: str, pg_dsn: str) -> dict:
     silver = duckdb.connect(silver_path, read_only=True)
     meta = dict(silver.execute("SELECT key, value FROM meta").fetchall())
     run_id, source_db, fy = meta["run_id"], meta["source_db"], int(meta["fiscal_year"])
-    summary, counts = {}, {}
+    summary, counts, schema_changes = {}, {}, {}
     with psycopg.connect(pg_dsn) as pg:
         pg.execute(DDL)
         for table, keys in KEYS.items():
             cols = _columns(silver, table)
             if not cols:
                 continue
-            ensure_table(pg, table, cols)
+            added = ensure_table(pg, table, cols)
             names = [c for c, _ in cols]
             q = ", ".join(f'"{c}"' for c in names)
             pg.execute(f'CREATE TEMP TABLE stg (LIKE holoo_mirror."{table}" INCLUDING DEFAULTS) ON COMMIT DROP')
@@ -101,12 +109,15 @@ def publish(silver_path: str, pg_dsn: str) -> dict:
                 SELECT %s, t.source_db, %s, {keyjson_t}, 'removed_in_source', t.source_row_hash, NULL
                 FROM holoo_mirror."{table}" t WHERE t.source_db = %s AND t.removed_run IS NULL
                   AND NOT EXISTS (SELECT 1 FROM stg s WHERE {on})""", (run_id, table, source_db))
+            backfill = " OR true" if added else ""
+            if added:
+                schema_changes[table] = added
             upd = ", ".join(f'"{c}" = EXCLUDED."{c}"' for c in names if c not in keys) + ", fiscal_year = EXCLUDED.fiscal_year"
             pg.execute(f"""INSERT INTO holoo_mirror."{table}" (source_db, fiscal_year, {q}, first_run, last_run)
                 SELECT source_db, fiscal_year, {q}, %s, %s FROM stg
                 ON CONFLICT (source_db, {kq}) DO UPDATE SET {upd}, last_run = EXCLUDED.last_run, removed_run = NULL
                 WHERE holoo_mirror."{table}".source_row_hash IS DISTINCT FROM EXCLUDED.source_row_hash
-                   OR holoo_mirror."{table}".removed_run IS NOT NULL""", (run_id, run_id))
+                   OR holoo_mirror."{table}".removed_run IS NOT NULL{backfill}""", (run_id, run_id))
             pg.execute(f"""UPDATE holoo_mirror."{table}" t SET last_run = %s FROM stg s WHERE {on} AND t.last_run IS DISTINCT FROM %s""", (run_id, run_id))
             pg.execute(f"""UPDATE holoo_mirror."{table}" t SET removed_run = %s WHERE t.source_db = %s AND t.removed_run IS NULL
                 AND NOT EXISTS (SELECT 1 FROM stg s WHERE {on})""", (run_id, source_db))
@@ -117,6 +128,7 @@ def publish(silver_path: str, pg_dsn: str) -> dict:
                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (run_id) DO UPDATE SET published_at = now(), counts = EXCLUDED.counts,
                       change_summary = EXCLUDED.change_summary""",
                    (run_id, meta["backup_sha256"], source_db, fy, meta.get("holoo_version"), meta.get("reader_version"),
-                    json.dumps(counts), json.dumps(summary)))
+                    json.dumps(counts), json.dumps({**summary, **({"_added_columns": schema_changes} if schema_changes else {})})))
     silver.close()
-    return {"run_id": run_id, "source_db": source_db, "counts": counts, "changes": {k: v for k, v in summary.items() if v}}
+    return {"run_id": run_id, "source_db": source_db, "counts": counts, "changes": {k: v for k, v in summary.items() if v},
+            "added_columns": schema_changes}

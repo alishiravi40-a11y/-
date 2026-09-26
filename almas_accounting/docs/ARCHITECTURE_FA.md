@@ -1,6 +1,6 @@
 # معماری هدف — نسل جدید حسابداری رسمی الماس شهر
 
-> وضعیت: **طرح اولیه (v0.1)** بر مبنای مهندسی معکوس اثبات‌شده. تصمیم‌های وابسته به مالک در `OWNER_DECISIONS_FA.md` علامت‌گذاری شده‌اند.
+> وضعیت: **v0.2** (تصمیم‌های D-01، D-02، D-05 و D-06 اعمال شد؛ `core/schema/002_decisions.sql`) بر مبنای مهندسی معکوس اثبات‌شده. تصمیم‌های وابسته به مالک در `OWNER_DECISIONS_FA.md` علامت‌گذاری شده‌اند.
 
 ## ۱. نمای کلی
 
@@ -81,8 +81,9 @@
 ## ۸. تصمیم‌های مالک و اثر طراحی (۱۴۰۵/۰۷)
 | تصمیم | اثر در طراحی | پیاده‌سازی |
 |---|---|---|
-| D-01 VAT سازگار با هلو | `vat_mode = holoo_compatible`: فیلدهای مالیات و عوارض روی ردیف ذخیره و ثبت می‌شوند و محاسبه خودکار ندارند | `core.setting`، `core.sales_invoice_line.vat_amount/levy_amount` |
-| D-02 ادواری | فروش سند COGS ندارد؛ COGS در بستن سال؛ ارزش‌گذاری مدیریتی جدا | `core.setting('inventory_accounting','periodic')` |
-| D-05 چند سال باز هم‌زمان | وضعیت هر سال و دوره مستقل؛ تغییر فقط با `core.change_period_status()` / `core.change_fiscal_year_status()` با مجوز `period.close`/`period.reopen` + علت + Audit؛ به‌روزرسانی مستقیم وضعیت مسدود؛ هر سند داخل یک سال و دوره همان سال | آزمون‌های `test_decisions.py` |
-| D-06 فروش زیر قیمت خرید | هشدار در پیش‌نویس (`core.sales_invoice_warnings`)؛ نهایی‌سازی بدون مجوز `sales.below_cost` مسدود؛ با مجوز ثبت `core.below_cost_event` + Audit؛ گزارش مدیریتی | آزمون‌های `test_decisions.py`؛ کنترل CTL-10 روی آینه |
+| D-01 VAT سازگار با هلو ✅ | `vat_mode = holoo_compatible`: فیلدهای مالیات و عوارض روی ردیف ذخیره و ثبت می‌شوند و محاسبه خودکار ندارند | `core.setting`، `core.sales_invoice_line.vat_amount/levy_amount` |
+| D-02 ادواری ✅ | فروش سند COGS ندارد؛ COGS در بستن سال؛ ارزش‌گذاری مدیریتی جدا | `core.setting('inventory_accounting','periodic')` |
+| D-05 چند سال باز هم‌زمان ✅ پیاده‌شده | وضعیت هر سال و دوره مستقل؛ تغییر فقط با `core.change_period_status()` / `core.change_fiscal_year_status()` با مجوز `period.close`/`period.reopen` + علت + Audit؛ به‌روزرسانی مستقیم وضعیت مسدود؛ هر سند داخل یک سال و دوره همان سال | آزمون‌های `test_decisions.py` |
+| D-06 فروش زیر قیمت خرید ✅ پیاده‌شده | هشدار در پیش‌نویس (`core.sales_invoice_warnings`)؛ نهایی‌سازی بدون مجوز `sales.below_cost` مسدود؛ با مجوز ثبت `core.below_cost_event` + Audit؛ گزارش مدیریتی | آزمون‌های `test_decisions.py`؛ کنترل CTL-10 روی آینه |
 | D-11 تعریف قیمت خرید (باز) | هر دو معیار روی ردیف ذخیره می‌شوند؛ `below_cost_basis ∈ {undecided, moving_average, last_purchase, max}`؛ `undecided` = مجوز لازم اگر زیر هر یک باشد | تا تصمیم مالک |
+| D-12 وب‌سرویس و فروش زیر قیمت خرید (باز) | حساب وب‌سرویس یک کاربر عادی است؛ بدون مجوز، سفارش زیر بها در پیش‌نویس (صف تأیید) می‌ماند | تغییر فقط با اعطای مجوز؛ بدون تغییر کد |

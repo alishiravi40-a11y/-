@@ -38,3 +38,14 @@ def test_publish_is_idempotent_and_tracks_changes(pg, tmp_path):
     assert second["changes"] == {"voucher_line": {"changed": 1}, "cheque": {"removed_in_source": 1}}
     assert pg.execute("SELECT removed_run FROM holoo_mirror.cheque WHERE check_code = 36591").fetchone()[0] == "test-run-2"
     assert pg.execute("SELECT COUNT(*) FROM holoo_mirror.cheque").fetchone()[0] == 12515   # nothing physically deleted
+
+
+def test_new_canonical_column_is_added_and_backfilled_without_change_log(pg, tmp_path):
+    silver = os.path.join(WORK, "imports", SHA, "silver.duckdb")
+    old = tmp_path / "old.duckdb"; shutil.copy(silver, old)
+    c = duckdb.connect(str(old)); c.execute("ALTER TABLE document_line DROP COLUMN unit_last_purchase_cost"); c.close()
+    publish_pg.publish(str(old), DSN)                                 # mirror built by an older reader version
+    res = publish_pg.publish(silver, DSN)                             # same backup, newer reader
+    assert res["added_columns"] == {"document_line": ["unit_last_purchase_cost"]}
+    assert res["changes"] == {}                                        # not a source change
+    assert pg.execute("SELECT COUNT(unit_last_purchase_cost) FROM holoo_mirror.document_line WHERE fac_type = 'F'").fetchone()[0] >= 24894

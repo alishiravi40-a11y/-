@@ -7,14 +7,14 @@
 
 | دسته | تعداد |
 |---|---:|
-| A — حفظ عین منطق | 31 |
-| B — حفظ با طراحی بهتر | 30 |
+| A — حفظ عین منطق | 32 |
+| B — حفظ با طراحی بهتر | 31 |
 | C — جایگزین مدرن | 24 |
-| D — نیازمند تصمیم/اطلاعات | 8 |
+| D — نیازمند تصمیم/اطلاعات | 7 |
 
 | نیاز | تعداد |
 |---|---:|
-| MUST | 73 |
+| MUST | 74 |
 | SHOULD | 11 |
 | OPTIONAL | 6 |
 | NO | 3 |
@@ -22,9 +22,10 @@
 | وضعیت آینده | تعداد |
 |---|---:|
 | READER_READY | 36 |
-| TODO | 28 |
-| DESIGNED | 20 |
+| TODO | 27 |
+| DESIGNED | 17 |
 | VERIFIED | 9 |
+| IMPLEMENTED | 5 |
 
 ## حسابداری
 
@@ -49,8 +50,8 @@
 | ACC-17 | مرکز هزینه | `SND_LIST.MHaz_Code` | PROVEN | استفاده نشده | OPTIONAL | D | — | TODO |
 | ACC-18 | ارز | `SND_LIST.Bed_Arz/ArzId, MONEY` | PROVEN | استفاده نشده | OPTIONAL | D | — | TODO |
 | ACC-19 | حساب‌های انتظامی (چک ضمانت) | `001/002, TAZMIN` | PROVEN | 399 چک | MUST | A | مانده انتظامی = جمع TAZMIN باز | DESIGNED |
-| ACC-20 | کارتابل/تأیید/قطعی‌سازی سند | `SANAD.End_Save, Review, StateSanadForKartabl` | PROVEN | استفاده نشده | MUST | C | جایگزین: گردش تأیید + قفل دوره | DESIGNED |
-| ACC-21 | کنترل پنجره زمانی ثبت سند برای کاربر | `USERDB.InsSanadBefor/SanadTimeInsertValueBefore, EnterPriorDate` | NEEDS_MORE_EVIDENCE | 5 کاربر | MUST | C | جایگزین: قفل دوره + مجوز استثنا با Audit | DESIGNED |
+| ACC-20 | کارتابل/تأیید/قطعی‌سازی سند | `SANAD.End_Save, Review, StateSanadForKartabl` | PROVEN | استفاده نشده | MUST | C | جایگزین: چرخه پیش‌نویس→ثبت→قطعی + قفل دوره/سال با مجوز period.close/period.reopen، علت و Audit (D-05)؛ core test_d05_* | IMPLEMENTED |
+| ACC-21 | کنترل پنجره زمانی ثبت سند برای کاربر | `USERDB.InsSanadBefor/SanadTimeInsertValueBefore, EnterPriorDate` | NEEDS_MORE_EVIDENCE | 5 کاربر | MUST | C | جایگزین: ثبت در هر دوره باز (D-05) + قفل دوره با مجوز و Audit؛ core test_d05_* | IMPLEMENTED |
 
 ## اشخاص
 
@@ -84,6 +85,7 @@
 | SAL-12 | گزارش فاکتور ستونی/تیتر/خلاصه | `گزارش هلو` | PROVEN | پرکاربردترین | MUST | A | خروجی ماه نمونه برابر | TODO |
 | SAL-14 | تطبیق سند کانال فروش/خرید وب با سند هلو | `WEBBLOB ↔ FACTURE/FACTART` | PROVEN | فعال | MUST | C | R-10a؛ جایگزین: منبع حقیقت واحد + تطبیق | READER_READY |
 | SAL-13 | بالاترین فروش به اشخاص/کالاها | `گزارش هلو` | PROVEN | فعال | MUST | A | رتبه‌بندی برابر | TODO |
+| SAL-15 | دو معیار قیمت خرید روی ردیف فروش (میانگین متحرک / آخرین خرید) و کنترل فروش زیر قیمت خرید | `FACTART.Buy_Price, FACTART.EndBuy_PriceK؛ MSETUP2 CheckBuyPriceAlart/CalcSoodInForooshEndBuyPrice` | PROVEN | هشدار هلو خاموش؛ 9,562 ردیف زیر یکی از دو معیار | MUST | B | golden: 8,078 / 7,001 / 9,562؛ core: هشدار + مجوز sales.below_cost + سابقه (D-06)؛ معیار مجوز D-11 باز | IMPLEMENTED |
 
 ## خرید
 
@@ -156,7 +158,7 @@
 |---|---|---|---|---|---|---|---|---|
 | TAX-01 | ارسال به سامانه مؤدیان و وضعیت | `FACTURE.StateTax/FTaxId/UId/SerialFact, TaxLog` | PROVEN | 20,608 ارسال | MUST | B | وضعیت هر فاکتور برابر؛ تطبیق دفاتر↔مؤدیان | READER_READY |
 | TAX-02 | ابطال در مؤدیان | `TaxLog SendType 3` | PROVEN | 4 | MUST | B | هم‌زمان با سند معکوس | READER_READY |
-| TAX-03 | مالیات بر ارزش افزوده روی فاکتور | `Sum_Levy/Sum_Scot/Levy/Scot` | PROVEN | صفر | MUST | D | نیاز به تصمیم مالیاتی (قیمت شامل مالیات؟) | TODO |
+| TAX-03 | مالیات بر ارزش افزوده روی فاکتور | `Sum_Levy/Sum_Scot/Levy/Scot؛ MSETUP2 VAT/Darsad_Maliat/Darsad_Avarez` | PROVEN | صفر | MUST | A | D-01: رفتار هلو حفظ می‌شود (vat_mode=holoo_compatible؛ مقدار منبع ذخیره، بدون محاسبه حدسی)؛ core test_d01_* | IMPLEMENTED |
 
 ## سوابق
 
@@ -180,6 +182,6 @@
 |---|---|---|---|---|---|---|---|---|
 | SYS-01 | تنظیمات برنامه (Key-Value) | `MSETUP/MSETUP2/MSETUP3` | PROVEN | فعال | SHOULD | C | فقط تنظیمات مؤثر بر داده Import شوند | TODO |
 | SYS-02 | پشتیبان‌گیری (محلی/DropBox) و ثبت آن | `BackInfo, Log A7` | PROVEN | فعال | MUST | B | — | TODO |
-| SYS-03 | سال مالی = دیتابیس جدا (OldYear) | `نام DB holoo1_1404، مسیر OldYear` | PROVEN | فعال | MUST | C | جایگزین: چندساله در یک پایگاه + قفل سال؛ Reader چند Backup | DESIGNED |
+| SYS-03 | سال مالی = دیتابیس جدا (OldYear) | `نام DB holoo1_1404، مسیر OldYear` | PROVEN | فعال | MUST | C | جایگزین: چندساله در یک پایگاه با تفکیک کامل هر سال؛ چند سال هم‌زمان باز؛ سال جدید سال قبل را قفل نمی‌کند (D-05)؛ Reader چند Backup | IMPLEMENTED |
 | SYS-04 | طراحی چاپ فاکتور/چک/برچسب | `PRN_FACT, CHK_TARH, SETPRINT, LABEL, Set_TncRep` | PROVEN | فعال | SHOULD | C | قالب‌های چاپ جدید | TODO |
 | SYS-05 | ماژول‌های بدون داده (تولید، امانی، طلا، اجاره، رستوران، گارانتی) | `FAC_BILD, AB_CATCH, Gold*, VC_Facture, Res_*, Kh_*` | PROVEN | استفاده نشده | NO | D | فقط Reader آماده شناسایی باشد | TODO |
