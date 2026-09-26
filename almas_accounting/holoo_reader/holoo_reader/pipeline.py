@@ -8,7 +8,7 @@ import os
 
 import duckdb
 
-from . import READER_VERSION, checks, extract, profile, sqlserver, transform
+from . import READER_VERSION, blobs, checks, extract, profile, sqlserver, transform
 from .acquire import acquire
 from .registry import Registry
 
@@ -26,7 +26,7 @@ def ingest(inputs: list[str], workdir: str, cfg: sqlserver.ServerConfig | None =
                            operator=operator or getpass.getuser(), finished_at=_dt.datetime.now(), silver_path=done[1])
         return {"run_id": run_id, "status": "duplicate", "duplicate_of": done[0], "silver_path": done[1]}
 
-    run_id = reg.start(status="running", backup_sha256=acq.backup_sha256, backup_size=acq.backup_size, inner_name=acq.inner_name,
+    run_id = reg.start(status="running", forced=bool(done), backup_sha256=acq.backup_sha256, backup_size=acq.backup_size, inner_name=acq.inner_name,
                        inputs=[vars(s) for s in acq.inputs], reader_version=READER_VERSION, operator=operator or getpass.getuser())
     try:
         out_dir = os.path.join(workdir, "imports", acq.backup_sha256)
@@ -38,6 +38,7 @@ def ingest(inputs: list[str], workdir: str, cfg: sqlserver.ServerConfig | None =
                 raise RuntimeError(f"unsupported Holoo profile; missing required columns: {prof['missing_required']}")
             ext = extract.extract_all(conn, bronze)
         reg.update(run_id, source_db=prof["source_db"], fiscal_year=prof["fiscal_year"], profile=prof, backup_meta=meta)
+        decoded = blobs.decode(bronze, os.path.join(out_dir, "decoded"))
         silver = os.path.join(out_dir, "silver.duckdb")
         counts = transform.build_silver(bronze, silver, {
             "backup_sha256": acq.backup_sha256, "source_db": prof["source_db"], "fiscal_year": prof["fiscal_year"],
@@ -51,7 +52,7 @@ def ingest(inputs: list[str], workdir: str, cfg: sqlserver.ServerConfig | None =
         changes = reg.diff(run_id, prev[0], prev[1], silver) if prev else None
         with open(os.path.join(out_dir, "report.json"), "w", encoding="utf-8") as f:
             json.dump({"run_id": run_id, "backup_sha256": acq.backup_sha256, "profile": prof, "backup_meta": meta, "extract": ext,
-                       "silver_counts": counts, "checks": results, "gate_passed": passed, "previous_run": prev[0] if prev else None,
+                       "decoded": decoded, "silver_counts": counts, "checks": results, "gate_passed": passed, "previous_run": prev[0] if prev else None,
                        "change_summary": changes}, f, ensure_ascii=False, indent=1, default=str)
         reg.update(run_id, status="completed", finished_at=_dt.datetime.now(), silver_path=silver, counts=counts, checks=results,
                    gate_passed=passed, previous_run=prev[0] if prev else None, change_summary=changes)

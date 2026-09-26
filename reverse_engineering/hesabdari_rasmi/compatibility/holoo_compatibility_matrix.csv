@@ -41,6 +41,7 @@ SAL-09,فروش,سطوح قیمت فروش (۱۰۰ سطح) و ArticlePrice,"ARTI
 SAL-10,فروش,پیش‌فاکتور,FBAILPRE/ABAILPRE (P),8,PROVEN,8,OPTIONAL,D,—,TODO
 SAL-11,فروش,حاشیه سود ردیف (بهای میانگین در ردیف),FACTART.Buy_Price,101 ردیف بهای صفر,PROVEN,فعال,MUST,C,جایگزین: بازمحاسبه بها پس از ثبت عقب‌افتاده,DESIGNED
 SAL-12,فروش,گزارش فاکتور ستونی/تیتر/خلاصه,گزارش هلو,390+41 اجرا,PROVEN,پرکاربردترین,MUST,A,خروجی ماه نمونه برابر,TODO
+SAL-14,فروش,تطبیق سند کانال فروش/خرید وب با سند هلو,WEBBLOB ↔ FACTURE/FACTART,807 فاکتور متفاوت؛ 782 با اصلاح در هلو (E12.7),PROVEN,فعال,MUST,C,R-10a؛ جایگزین: منبع حقیقت واحد + تطبیق,READER_READY
 SAL-13,فروش,بالاترین فروش به اشخاص/کالاها,گزارش هلو,38+10 اجرا,PROVEN,فعال,MUST,A,رتبه‌بندی برابر,TODO
 PUR-01,خرید,فاکتور خرید,FACTURE/FACTART K؛ سند 14,بد 801/بس 401,PROVEN,942,MUST,A,مبالغ، ردیف‌ها و اثر میانگین برابر,READER_READY
 PUR-02,خرید,برگشت از خرید,X؛ سند 13,بد تأمین‌کننده/بس 802,PROVEN,1,MUST,A,برابر,READER_READY
@@ -81,7 +82,8 @@ TAX-01,مالیات,ارسال به سامانه مؤدیان و وضعیت,"FAC
 TAX-02,مالیات,ابطال در مؤدیان,TaxLog SendType 3,4,PROVEN,4,MUST,B,هم‌زمان با سند معکوس,READER_READY
 TAX-03,مالیات,مالیات بر ارزش افزوده روی فاکتور,Sum_Levy/Sum_Scot/Levy/Scot,همه صفر,PROVEN,صفر,MUST,D,نیاز به تصمیم مالیاتی (قیمت شامل مالیات؟),TODO
 AUD-01,سوابق,Log عملیات کاربران با متن فارسی,Process,"108,730",PROVEN,فعال,MUST,B,همه ردیف‌ها Import؛ ترمیم Mojibake,READER_READY
-AUD-02,سوابق,تصویر سند قبل از حذف/اصلاح (Blob ADTG),Process.Blob,"~45,000 Blob",PROVEN,فعال,MUST,B,Parser ADTG؛ بازسازی نسخه‌های سند,TODO
+AUD-02,سوابق,تصویر سند در هر عملیات (After-image؛ Blob ADTG) — بازیابی نسخه‌ها و اسناد حذف‌شده,Process.Blob,"46,181 Blob رمزگشایی شد؛ After-image اثبات شد (E12.2)",PROVEN,فعال,MUST,B,"Parser ADTG؛ 161,163 ردیف تاریخی؛ آخرین تصویر = سند فعلی (97%)",READER_READY
+AUD-04,سوابق,Payload خام وب‌سرویس (JSON invoiceinfo),Process.WEBBLOB,"21,012 Payload؛ ErpCode 1:1 (E12.9)",PROVEN,فعال,MUST,B,R-10a/b/c؛ تطبیق روزانه وب↔دفتر,READER_READY
 AUD-03,سوابق,گزارش کلی عملیات سیستم,گزارش هلو,2 اجرا,PROVEN,کم,MUST,B,—,TODO
 SEC-01,امنیت,کاربران و ۲۱۱ مجوز,USERDB,16 کاربر,PROVEN,فعال,MUST,C,جایگزین: RBAC + احراز هویت امن؛ نگاشت مجوزهای کلیدی,DESIGNED
 SEC-02,امنیت,کاربر سرپرست و کاربر وب‌سرویس,"USERDB.SuperVizor, User 3",6 سرپرست,PROVEN,فعال,MUST,C,جایگزین: حساب سرویس با حداقل دسترسی,READER_READY

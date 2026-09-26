@@ -107,6 +107,11 @@ def build_silver(bronze_dir: str, silver_path: str, meta: dict) -> dict:
     load("""INSERT INTO opening_version SELECT Id, UserCodeInc, Endeditdate, _row_hash FROM {Sanad_Edit}""", "Sanad_Edit")
     load("""INSERT INTO opening_version_line SELECT id, Col_Code || Moien_Code || Tafzili_Code, coalesce(Bed,0), coalesce(Bes,0), "index", _row_hash FROM {snd_list_Edit}""", "snd_list_Edit")
 
+    for t in ("audit_snapshot", "web_payload", "web_payload_line"):
+        pth = os.path.join(bronze_dir, "..", "decoded", f"{t}.parquet")
+        if os.path.exists(pth):
+            con.execute(f"INSERT INTO {t} SELECT * FROM read_parquet('{pth}')")
+
     counts = {t: con.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0] for (t,) in con.execute(
         "SELECT table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE' ORDER BY 1").fetchall()}
     con.close()

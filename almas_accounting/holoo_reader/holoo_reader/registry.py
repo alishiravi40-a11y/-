@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS import_run (
   run_id VARCHAR PRIMARY KEY, started_at TIMESTAMP, finished_at TIMESTAMP, status VARCHAR, duplicate_of VARCHAR,
   backup_sha256 VARCHAR, backup_size BIGINT, inner_name VARCHAR, inputs JSON, source_db VARCHAR, fiscal_year INTEGER,
   profile JSON, backup_meta JSON, reader_version VARCHAR, operator VARCHAR, silver_path VARCHAR, counts JSON,
-  checks JSON, gate_passed BOOLEAN, previous_run VARCHAR, change_summary JSON, error VARCHAR);
+  checks JSON, gate_passed BOOLEAN, previous_run VARCHAR, change_summary JSON, error VARCHAR, forced BOOLEAN DEFAULT false);
 CREATE TABLE IF NOT EXISTS source_change (
   run_id VARCHAR, previous_run VARCHAR, entity VARCHAR, entity_key VARCHAR, change VARCHAR, old_hash VARCHAR, new_hash VARCHAR);
 """
@@ -33,6 +33,7 @@ class Registry:
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         self.con = duckdb.connect(path)
         self.con.execute(DDL)
+        self.con.execute("ALTER TABLE import_run ADD COLUMN IF NOT EXISTS forced BOOLEAN DEFAULT false")
 
     def completed_by_sha(self, sha: str):
         return self.con.execute("SELECT run_id, silver_path FROM import_run WHERE backup_sha256 = ? AND status = 'completed' ORDER BY started_at LIMIT 1", [sha]).fetchone()

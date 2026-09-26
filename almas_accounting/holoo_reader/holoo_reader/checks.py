@@ -118,6 +118,21 @@ def run_all(con: duckdb.DuckDBPyConnection, bronze_counts: dict | None = None) -
                     r.explanation = f"همه مانده‌ها ناشی از اسناد {len(vc)} فاکتور ابطال‌شده (Q) است (evidence E01)"
         R.append(r)
 
+    # R-10 web-service payload vs posted invoice (payload = what the web shop sent; invoice = what Holoo kept)
+    if _one(con, "SELECT COUNT(*) FROM web_payload")[0]:
+        base = """FROM web_payload w JOIN audit_event a ON a.id = w.process_id
+                  JOIN document d ON d.voucher_code = TRY_CAST(a.number AS INTEGER) AND d.kind IN ('sale','sale_voided','purchase')"""
+        n_amt = _one(con, f"SELECT COUNT(*) {base} WHERE a.kind = 'add' AND abs(coalesce(w.cash,0) + coalesce(w.bank,0) + coalesce(w.credit,0) - d.total) > 1")[0]
+        R.append(Result("R-10a", "مبلغ Payload وب‌سرویس = مبلغ فاکتور ثبت‌شده", "warning", "pass" if n_amt == 0 else "fail", 0, n_amt, n_amt,
+                        "اختلاف یعنی فاکتور پس از دریافت از وب در هلو اصلاح شده است (تسویه، چک، …)"))
+        n_date = _one(con, f"SELECT COUNT(*) {base} WHERE a.kind = 'add' AND w.doc_date <> d.doc_date")[0]
+        R.append(Result("R-10b", "تاریخ Payload وب‌سرویس = تاریخ فاکتور", "warning", "pass" if n_date == 0 else "fail", 0, n_date, n_date,
+                        "تغییر تاریخ فاکتور نسبت به تاریخ فروش در سامانه وب (Cut-off)"))
+        fy_start = _one(con, "SELECT MIN(doc_date) FROM voucher")[0]
+        n_prev = _one(con, f"SELECT COUNT(*) FROM web_payload w JOIN audit_event a ON a.id = w.process_id WHERE a.kind = 'add' AND w.doc_date < DATE '{fy_start}'")[0]
+        R.append(Result("R-10c", "Payloadهای وب با تاریخ سال مالی قبل که در این سال ارسال شده‌اند", "warning", "pass" if n_prev == 0 else "fail", 0, n_prev, n_prev,
+                        "فروش سال قبل که پس از شروع سال جدید به این دیتابیس ارسال شده (evidence E12)"))
+
     # R-08 opening voucher = previous year's closing (needs previous-year import) → reported as not-applicable here
     # R-09 bronze vs silver counts
     if bronze_counts:

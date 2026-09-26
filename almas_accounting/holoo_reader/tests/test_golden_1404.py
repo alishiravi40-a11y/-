@@ -85,4 +85,20 @@ def test_report_gate_and_registry():
     rep = json.load(open(os.path.join(WORK, "imports", SHA, "report.json")))
     assert rep["gate_passed"] is True
     reg = duckdb.connect(os.path.join(WORK, "registry.duckdb"), read_only=True)
-    assert reg.execute("SELECT COUNT(*) FROM import_run WHERE backup_sha256 = ? AND status = 'completed'", [SHA]).fetchone()[0] == 1
+    # exactly one normal completed import per backup; later runs are either 'duplicate' or explicitly forced
+    assert reg.execute("SELECT COUNT(*) FROM import_run WHERE backup_sha256 = ? AND status = 'completed' AND NOT coalesce(forced, false)", [SHA]).fetchone()[0] == 1
+    assert reg.execute("SELECT COUNT(*) FROM import_run WHERE backup_sha256 = ? AND status = 'duplicate'", [SHA]).fetchone()[0] >= 1
+
+
+def test_blob_decoding_and_web_payloads(con):
+    assert one(con, "SELECT COUNT(DISTINCT process_id) FROM audit_snapshot") == 46181
+    assert one(con, "SELECT COUNT(*) FROM web_payload") == 21012
+    # after-image semantics: last snapshot equals current voucher for 21,158 of 21,762 vouchers
+    assert one(con, "SELECT COUNT(*) FROM voucher_absent WHERE doc_date_jalali < '1404' AND doc_date_jalali >= '1403'") == 10736
+
+
+def test_prior_year_web_sales_removed(con):
+    n = one(con, """SELECT COUNT(*) FROM web_payload w JOIN audit_event a ON a.id = w.process_id
+                    LEFT JOIN document d ON d.voucher_code = TRY_CAST(a.number AS INTEGER) AND d.kind IN ('sale','sale_voided')
+                    WHERE a.kind = 'add' AND w.doc_type = 1 AND w.doc_date < DATE '2025-03-21' AND d.fac_code IS NULL""")
+    assert n == 130

@@ -68,6 +68,13 @@ CREATE TABLE app_user (code INTEGER PRIMARY KEY, name VARCHAR, is_supervisor BOO
 CREATE TABLE opening_version_line (version INTEGER, account_code VARCHAR, debit DOUBLE, credit DOUBLE, line_index INTEGER, source_row_hash VARCHAR);
 CREATE TABLE opening_version (version INTEGER PRIMARY KEY, user_code INTEGER, edited_at TIMESTAMP, source_row_hash VARCHAR);
 
+-- Decoded Process blobs (after-images) and web-service payloads
+CREATE TABLE audit_snapshot (process_id INTEGER, row_no INTEGER, tables VARCHAR, data JSON);
+CREATE TABLE web_payload (process_id INTEGER PRIMARY KEY, strict_json BOOLEAN, payload_id VARCHAR, order_no VARCHAR, doc_type INTEGER,
+  doc_date DATE, doc_time VARCHAR, customer_erpcode VARCHAR, cash DOUBLE, cash_account VARCHAR, bank DOUBLE, bank_account VARCHAR,
+  credit DOUBLE, discount DOUBLE, comment VARCHAR, line_count INTEGER, lines_total DOUBLE);
+CREATE TABLE web_payload_line (process_id INTEGER, line_no INTEGER, product_erpcode VARCHAR, qty DOUBLE, price DOUBLE);
+
 -- Derived
 CREATE VIEW stock_movement AS
 SELECT l.fac_type, l.fac_code, d.doc_date, l.a_code, l.line_index, d.kind,
@@ -86,3 +93,19 @@ CREATE VIEW account_balance AS
 SELECT l.account_code, SUM(l.debit) debit, SUM(l.credit) credit, SUM(l.debit) - SUM(l.credit) balance,
        SUM(CASE WHEN v.state NOT IN ('closing_temporary','closing') THEN l.debit - l.credit ELSE 0 END) balance_before_closing
 FROM voucher_line l JOIN voucher v USING (sanad_code) WHERE l.in_ledger GROUP BY l.account_code;
+
+-- Voucher history from after-images: one row per (process event, voucher line)
+CREATE VIEW voucher_snapshot_line AS
+SELECT s.process_id, a.event_date, a.event_time, a.user_code, a.kind, s.row_no,
+       CAST(json_extract(s.data, '$."Sanad.Sanad_Code"') AS INTEGER) AS sanad_code,
+       json_extract_string(s.data, '$.Sanad_Date') AS doc_date_jalali,
+       json_extract_string(s.data, '$.Sarfasl_code') AS account_code,
+       CAST(json_extract(s.data, '$.Bed') AS DOUBLE) AS debit, CAST(json_extract(s.data, '$.Bes') AS DOUBLE) AS credit,
+       json_extract_string(s.data, '$.Comment_Line') AS description
+FROM audit_snapshot s JOIN audit_event a ON a.id = s.process_id
+WHERE s.tables = 'SND_LIST,Sanad,USERDB';
+
+-- Vouchers seen in the log but absent from this database (deleted, or belonging to another fiscal-year database)
+CREATE VIEW voucher_absent AS
+SELECT sanad_code, min(doc_date_jalali) doc_date_jalali, list(DISTINCT kind) kinds, min(event_date) first_event, max(event_date) last_event
+FROM voucher_snapshot_line WHERE sanad_code NOT IN (SELECT sanad_code FROM voucher) GROUP BY sanad_code;
