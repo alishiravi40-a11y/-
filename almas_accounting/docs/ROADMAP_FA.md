@@ -11,7 +11,7 @@
 | 7 | **پیاده‌سازی Holoo Backup Reader** | `holoo_reader/` v0.1: Pipeline کامل؛ Parser ADTG و Payload وب؛ Parity با Viewهای خود هلو؛ ۳۱ آزمون | ✅ v0.1 |
 | 8 | تکمیل مجهولات با آزمایش | ✅ Parser ADTG (دور ۴)؛ ⏳ Backup ۱۴۰۳/۱۴۰۵؛ آزمایش کنترل‌شده روی هلو | ⏳ نیاز به D-09 |
 | 9 | Data platform و آینه | PostgreSQL `holoo_mirror`، Import مکرر | ✅ v0.1 — `holoo-reader publish` (Idempotent، change_log، بدون حذف فیزیکی)؛ آزمون خودکار |
-| 10 | داشبورد و کنترل‌های مدیریتی روی آینه | Controls engine + Analytics | ⏳ |
+| 10 | داشبورد و کنترل‌های مدیریتی روی آینه | Controls engine + Analytics | 🔄 v0.1: ۱۴ View تحلیلی + ۲۰ کنترل خودکار (`analytics/`)؛ ادامه: داشبورد UI |
 | 11 | هسته حسابداری جدید | Ledger، دوره‌ها، اسناد، اشخاص | ⏳ پس از D-02، D-03، D-05 |
 | 12 | زیردامنه‌ها | فروش، خرید، انبار، خزانه، چک، مالیات | ⏳ |
 | 13 | فاز موازی و Parity | Diff روزانه با Backup هلو | ⏳ D-07 |
