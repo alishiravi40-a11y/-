@@ -125,18 +125,19 @@ LEFT JOIN holoo_mirror.document d ON d.source_db = w.source_db AND d.voucher_cod
      AND d.kind IN ('sale', 'sale_voided', 'purchase') AND d.removed_run IS NULL
 WHERE w.removed_run IS NULL;
 
--- D-11 basis at MODEL level: last purchase of the same model (item name, any warehouse) on/before the sale date.
+-- D-11 / D-13 (owner decision): last purchase of the same MODEL anywhere in the company (normalized item name =
+-- name_key, so spelling variants of ی/ك and spaces are one model), regardless of warehouse or later transfers.
 -- Holoo's own FACTART.EndBuy_PriceK is per item code = per warehouse, so stock received only by transfer has none
 -- (4,944 of 4,947 blank lines in 1404). Purchases on the sale date count (as in Holoo).
 CREATE OR REPLACE VIEW analytics.sales_line_last_purchase AS
 WITH p AS (
-  SELECT l.source_db, btrim(i.name) AS model, d.doc_date, 0 AS ord, l.fac_code, l.unit_price AS price, NULL::text AS sale_fac, NULL::text AS sale_a, NULL::int AS sale_idx
+  SELECT l.source_db, i.name_key AS model, d.doc_date, 0 AS ord, l.fac_code, l.unit_price AS price, NULL::text AS sale_fac, NULL::text AS sale_a, NULL::int AS sale_idx
   FROM holoo_mirror.document_line l JOIN holoo_mirror.document d USING (source_db, fac_type, fac_code)
   JOIN holoo_mirror.item i ON i.source_db = l.source_db AND i.a_code = l.a_code
   WHERE l.fac_type = 'K' AND l.removed_run IS NULL AND d.removed_run IS NULL
   UNION ALL
-  SELECT s.source_db, btrim(s.item_name), s.doc_date, 1, s.fac_code, NULL, s.fac_code, s.a_code, s.line_index
-  FROM analytics.sales_line s),
+  SELECT s.source_db, i.name_key, s.doc_date, 1, s.fac_code, NULL, s.fac_code, s.a_code, s.line_index
+  FROM analytics.sales_line s JOIN holoo_mirror.item i ON i.source_db = s.source_db AND i.a_code = s.a_code),
 g AS (SELECT *, COUNT(price) OVER (PARTITION BY source_db, model ORDER BY doc_date, ord, fac_code ROWS UNBOUNDED PRECEDING) AS grp FROM p),
 v AS (SELECT *, first_value(price) OVER (PARTITION BY source_db, model, grp ORDER BY doc_date, ord, fac_code DESC) AS last_purchase_model FROM g)
 SELECT source_db, sale_fac AS fac_code, sale_a AS a_code, sale_idx AS line_index, model, last_purchase_model

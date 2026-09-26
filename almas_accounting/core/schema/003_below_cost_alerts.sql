@@ -37,7 +37,8 @@ ALTER TABLE core.app_user ADD COLUMN is_service boolean NOT NULL DEFAULT false; 
 -- ============ D-11: last purchase price comes from purchase history of the item (all warehouses) ============
 -- Holoo keeps EndBuy_PriceK per item code, and item codes are per warehouse: stock received only by transfer
 -- had NO last purchase price (4,944 of the 4,947 blank sale lines in 1404). Here the item is the model (D-04),
--- so the last purchase of the model in any warehouse applies.  See D-13.
+-- so the last purchase of the model in any warehouse applies (owner decision D-13: the whole company, regardless of
+-- the warehouse of purchase or later transfers).
 CREATE TABLE core.purchase_price (
   id bigserial PRIMARY KEY, item_id int NOT NULL REFERENCES core.item, purchase_date date NOT NULL,
   recorded_at timestamptz NOT NULL DEFAULT now(), unit_cost numeric(20,2) NOT NULL CHECK (unit_cost >= 0),

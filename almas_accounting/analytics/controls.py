@@ -39,7 +39,7 @@ CONTROLS = [
     dict(id="CTL-10", area="فروش", severity="high", title="فروش زیر بهای تمام‌شده (میانگین موزون متحرک)", refs="W-09, E07, E13.4",
          sql="""SELECT COUNT(*), coalesce(SUM(cost - revenue),0) FROM analytics.sales_line WHERE source_db=%(db)s AND below_cost""",
          explain=lambda v, a: f"{F(v)} ردیف فروش زیر بهای تمام‌شده فروخته شده؛ کسری جمعاً {F(a)} ریال."),
-    dict(id="CTL-10b", area="فروش", severity="high", title="فروش زیر آخرین قیمت خرید (مبنای رسمی D-11؛ آخرین خرید همان مدل در هر انبار)", refs="W-09, D-11, D-13, E13.4",
+    dict(id="CTL-10b", area="فروش", severity="high", title="فروش زیر آخرین قیمت خرید (مبنای رسمی D-11/D-13: آخرین خرید همان مدل در کل مجموعه)", refs="W-09, D-11, D-13, E13.4",
          sql="""SELECT COUNT(*), coalesce(SUM(qty * (last_purchase_basis - unit_price)),0) FROM analytics.sales_line_d11 WHERE source_db=%(db)s AND below_last_purchase_d11""",
          explain=lambda v, a: f"{F(v)} ردیف فروش زیر آخرین قیمت خرید بوده‌اند؛ اختلاف جمعاً {F(a)} ریال. این مبنای رسمی کنترل فروش زیر قیمت خرید است."),
     dict(id="CTL-10c", area="فروش", severity="high", title="فاکتورهایی که هشدار ایمیلی می‌گرفتند (یک ایمیل برای هر فاکتور؛ D-12)", refs="D-12",

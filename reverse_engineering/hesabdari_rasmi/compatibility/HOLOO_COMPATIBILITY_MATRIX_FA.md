@@ -85,7 +85,7 @@
 | SAL-12 | گزارش فاکتور ستونی/تیتر/خلاصه | `گزارش هلو` | PROVEN | پرکاربردترین | MUST | A | خروجی ماه نمونه برابر | TODO |
 | SAL-14 | تطبیق سند کانال فروش/خرید وب با سند هلو | `WEBBLOB ↔ FACTURE/FACTART` | PROVEN | فعال | MUST | C | R-10a؛ جایگزین: منبع حقیقت واحد + تطبیق | READER_READY |
 | SAL-13 | بالاترین فروش به اشخاص/کالاها | `گزارش هلو` | PROVEN | فعال | MUST | A | رتبه‌بندی برابر | TODO |
-| SAL-15 | دو معیار قیمت خرید روی ردیف فروش (میانگین متحرک / آخرین خرید) و کنترل فروش زیر قیمت خرید | `FACTART.Buy_Price, FACTART.EndBuy_PriceK؛ MSETUP2 CheckBuyPriceAlart/CalcSoodInForooshEndBuyPrice` | PROVEN | هشدار هلو خاموش؛ 8,198 ردیف زیر آخرین خرید مدل | MUST | B | D-11: مبنا=آخرین قیمت خرید؛ D-12: هشدار یکتا برای هر فاکتور + ایمیل؛ golden 8,078/7,001؛ core test_alerts؛ D-13 باز | IMPLEMENTED |
+| SAL-15 | دو معیار قیمت خرید روی ردیف فروش (میانگین متحرک / آخرین خرید) و کنترل فروش زیر قیمت خرید | `FACTART.Buy_Price, FACTART.EndBuy_PriceK؛ MSETUP2 CheckBuyPriceAlart/CalcSoodInForooshEndBuyPrice` | PROVEN | هشدار هلو خاموش؛ 8,200 ردیف زیر آخرین خرید مدل | MUST | B | D-11: مبنا=آخرین قیمت خرید؛ D-12: هشدار یکتا برای هر فاکتور + ایمیل؛ D-13: آخرین خرید همان مدل در کل مجموعه (8,200 ردیف؛ 72 بی‌مبنا)؛ core test_alerts | IMPLEMENTED |
 
 ## خرید
 
