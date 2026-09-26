@@ -9,23 +9,23 @@
 |---|---:|
 | A — حفظ عین منطق | 32 |
 | B — حفظ با طراحی بهتر | 31 |
-| C — جایگزین مدرن | 24 |
+| C — جایگزین مدرن | 25 |
 | D — نیازمند تصمیم/اطلاعات | 7 |
 
 | نیاز | تعداد |
 |---|---:|
-| MUST | 74 |
+| MUST | 75 |
 | SHOULD | 11 |
 | OPTIONAL | 6 |
 | NO | 3 |
 
 | وضعیت آینده | تعداد |
 |---|---:|
-| READER_READY | 37 |
+| READER_READY | 36 |
 | TODO | 25 |
 | DESIGNED | 17 |
 | VERIFIED | 10 |
-| IMPLEMENTED | 5 |
+| IMPLEMENTED | 7 |
 
 ## حسابداری
 
@@ -57,7 +57,7 @@
 
 | ID | قابلیت | منبع داده هلو | اثبات | کاربرد ۱۴۰۴ | نیاز | دسته | آزمون برابری | وضعیت |
 |---|---|---|---|---|---|---|---|---|
-| PER-01 | پرونده شخص (حقیقی/حقوقی، کد ملی، اقتصادی، آدرس، موبایل) | `CUSTOMER, Cust_Tell, FactOther` | PROVEN | 32,696 شخص | MUST | B | همه فیلدهای پرکاربرد Import و برابر | READER_READY |
+| PER-01 | پرونده شخص (حقیقی/حقوقی، کد ملی، اقتصادی، آدرس، موبایل) | `CUSTOMER, Cust_Tell, FactOther` | PROVEN | 32,696 شخص | MUST | B | همه فیلدهای پرکاربرد Import و برابر؛ نگاشت به core.party با party_legacy_code (Idempotent، ۳۲,۶۹۶ شخص) | IMPLEMENTED |
 | PER-02 | نقش شخص (خریدار/فروشنده/واسطه/پرسنل/…) | `CUSTOMER.Kharid/Forosh/Vaseteh/…` | PROVEN | تقریباً همه | SHOULD | C | جایگزین: نقش استنتاجی از رفتار + نقش صریح | DESIGNED |
 | PER-03 | دو حساب بدهکار/بستانکار برای هر شخص | `CUSTOMER.*_Bed/*_Bes, CustomerSarfasl` | PROVEN | 306 شخص دوحسابی/تک‌بستانکار | MUST | B | مانده شخص = اجتماع دو حساب | VERIFIED |
 | PER-04 | مانده و گردش شخص | `W_Calc_Mandeh_Customer, F_Calc_BedBes_UseInView` | PROVEN | فعال | MUST | A | مانده هر شخص قبل از بستن برابر | VERIFIED |
@@ -86,6 +86,7 @@
 | SAL-14 | تطبیق سند کانال فروش/خرید وب با سند هلو | `WEBBLOB ↔ FACTURE/FACTART` | PROVEN | فعال | MUST | C | R-10a؛ جایگزین: منبع حقیقت واحد + تطبیق | READER_READY |
 | SAL-13 | بالاترین فروش به اشخاص/کالاها | `گزارش هلو` | PROVEN | فعال | MUST | A | رتبه‌بندی برابر | TODO |
 | SAL-15 | دو معیار قیمت خرید روی ردیف فروش (میانگین متحرک / آخرین خرید) و کنترل فروش زیر قیمت خرید | `FACTART.Buy_Price, FACTART.EndBuy_PriceK؛ MSETUP2 CheckBuyPriceAlart/CalcSoodInForooshEndBuyPrice` | PROVEN | هشدار هلو خاموش؛ 8,200 ردیف زیر آخرین خرید مدل | MUST | B | D-11: مبنا=آخرین قیمت خرید؛ D-12: هشدار یکتا برای هر فاکتور + ایمیل؛ D-13: آخرین خرید همان مدل در کل مجموعه (8,200 ردیف؛ 72 بی‌مبنا)؛ core test_alerts | IMPLEMENTED |
+| SAL-16 | فروش اقساطی بتا (مشتری، قرارداد، قسط، وصول بانکی) | `SARFASL 1080004/4050006، GHEST (۲۲ ردیف)، شرح «وصول قسط بتا»` | PROVEN | ۳۹۷ مشتری؛ ۶۳.۵ میلیارد مانده | MUST | C | core 004_beta + beta/ (۳۱ آزمون)؛ اجرای آزمایشی: ۹۸.۹٪ شناسایی شخص از صورت‌حساب؛ ثبت حسابداری منتظر D-14 | IMPLEMENTED |
 
 ## خرید
 

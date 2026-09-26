@@ -20,7 +20,7 @@ ACC-18,حسابداری,ارز,"SND_LIST.Bed_Arz/ArzId, MONEY",0 ردیف,PROVEN
 ACC-19,حسابداری,حساب‌های انتظامی (چک ضمانت),"001/002, TAZMIN",مانده 0010002 = TAZMIN,PROVEN,399 چک,MUST,A,مانده انتظامی = جمع TAZMIN باز,DESIGNED
 ACC-20,حسابداری,کارتابل/تأیید/قطعی‌سازی سند,"SANAD.End_Save, Review, StateSanadForKartabl",همه 0,PROVEN,استفاده نشده,MUST,C,جایگزین: چرخه پیش‌نویس→ثبت→قطعی + قفل دوره/سال با مجوز period.close/period.reopen، علت و Audit (D-05)؛ core test_d05_*,IMPLEMENTED
 ACC-21,حسابداری,کنترل پنجره زمانی ثبت سند برای کاربر,"USERDB.InsSanadBefor/SanadTimeInsertValueBefore, EnterPriorDate",مقادیر 90/120 روز,NEEDS_MORE_EVIDENCE,5 کاربر,MUST,C,جایگزین: ثبت در هر دوره باز (D-05) + قفل دوره با مجوز و Audit؛ core test_d05_*,IMPLEMENTED
-PER-01,اشخاص,پرونده شخص (حقیقی/حقوقی، کد ملی، اقتصادی، آدرس، موبایل),"CUSTOMER, Cust_Tell, FactOther",—,PROVEN,"32,696 شخص",MUST,B,همه فیلدهای پرکاربرد Import و برابر,READER_READY
+PER-01,اشخاص,پرونده شخص (حقیقی/حقوقی، کد ملی، اقتصادی، آدرس، موبایل),"CUSTOMER, Cust_Tell, FactOther",—,PROVEN,"32,696 شخص",MUST,B,"همه فیلدهای پرکاربرد Import و برابر؛ نگاشت به core.party با party_legacy_code (Idempotent، ۳۲,۶۹۶ شخص)",IMPLEMENTED
 PER-02,اشخاص,نقش شخص (خریدار/فروشنده/واسطه/پرسنل/…),CUSTOMER.Kharid/Forosh/Vaseteh/…,پرچم‌ها تفکیک‌کننده نیستند,PROVEN,تقریباً همه,SHOULD,C,جایگزین: نقش استنتاجی از رفتار + نقش صریح,DESIGNED
 PER-03,اشخاص,دو حساب بدهکار/بستانکار برای هر شخص,"CUSTOMER.*_Bed/*_Bes, CustomerSarfasl",F_Union_BedBesCustomer,PROVEN,306 شخص دوحسابی/تک‌بستانکار,MUST,B,مانده شخص = اجتماع دو حساب,VERIFIED
 PER-04,اشخاص,مانده و گردش شخص,"W_Calc_Mandeh_Customer, F_Calc_BedBes_UseInView","بدون اسناد state 2,3",PROVEN,فعال,MUST,A,مانده هر شخص قبل از بستن برابر,VERIFIED
@@ -44,6 +44,7 @@ SAL-12,فروش,گزارش فاکتور ستونی/تیتر/خلاصه,گزار�
 SAL-14,فروش,تطبیق سند کانال فروش/خرید وب با سند هلو,WEBBLOB ↔ FACTURE/FACTART,807 فاکتور متفاوت؛ 782 با اصلاح در هلو (E12.7),PROVEN,فعال,MUST,C,R-10a؛ جایگزین: منبع حقیقت واحد + تطبیق,READER_READY
 SAL-13,فروش,بالاترین فروش به اشخاص/کالاها,گزارش هلو,38+10 اجرا,PROVEN,فعال,MUST,A,رتبه‌بندی برابر,TODO
 SAL-15,فروش,دو معیار قیمت خرید روی ردیف فروش (میانگین متحرک / آخرین خرید) و کنترل فروش زیر قیمت خرید,"FACTART.Buy_Price, FACTART.EndBuy_PriceK؛ MSETUP2 CheckBuyPriceAlart/CalcSoodInForooshEndBuyPrice","E13.2–E13.4؛ EndBuy_PriceK=آخرین خرید در 97.5% ردیف‌های دارای خرید قبلی؛ برای هر انبار جدا (4,947 ردیف منتقل‌شده بدون مبنا)",PROVEN,"هشدار هلو خاموش؛ 8,200 ردیف زیر آخرین خرید مدل",MUST,B,"D-11: مبنا=آخرین قیمت خرید؛ D-12: هشدار یکتا برای هر فاکتور + ایمیل؛ D-13: آخرین خرید همان مدل در کل مجموعه (8,200 ردیف؛ 72 بی‌مبنا)؛ core test_alerts",IMPLEMENTED
+SAL-16,فروش,فروش اقساطی بتا (مشتری، قرارداد، قسط، وصول بانکی),SARFASL 1080004/4050006، GHEST (۲۲ ردیف)، شرح «وصول قسط بتا»,E14–E16: قرارداد و قسط در هلو وجود ندارد؛ وصول گروهی و متنی,PROVEN,۳۹۷ مشتری؛ ۶۳.۵ میلیارد مانده,MUST,C,core 004_beta + beta/ (۳۱ آزمون)؛ اجرای آزمایشی: ۹۸.۹٪ شناسایی شخص از صورت‌حساب؛ ثبت حسابداری منتظر D-14,IMPLEMENTED
 PUR-01,خرید,فاکتور خرید,FACTURE/FACTART K؛ سند 14,بد 801/بس 401,PROVEN,942,MUST,A,مبالغ، ردیف‌ها و اثر میانگین برابر,READER_READY
 PUR-02,خرید,برگشت از خرید,X؛ سند 13,بد تأمین‌کننده/بس 802,PROVEN,1,MUST,A,برابر,READER_READY
 PUR-03,خرید,اقلام خدماتی در فاکتور خرید (کارمزد/حمل),FACTART روی کالاهای 01xxx,2.22 میلیارد,PROVEN,فعال,SHOULD,C,جایگزین: هزینه‌های جانبی خرید با تسهیم,TODO

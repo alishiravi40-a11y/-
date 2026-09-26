@@ -21,9 +21,11 @@ INSERT INTO core.setting (key, value, allowed, pattern, decision) VALUES
   ('web_below_cost_policy', 'allow_with_alert', '{allow_with_alert}', NULL, 'D-12');
 
 -- D-11: owner decision — last purchase price. Recorded as an audited, controlled change.
-SELECT set_config('almas.controlled_change', 'on', true);
-UPDATE core.setting SET value = 'last_purchase', updated_by = 'owner-decision-D-11', updated_at = now() WHERE key = 'below_cost_basis';
-SELECT set_config('almas.controlled_change', 'off', true);
+DO $$ BEGIN   -- one transaction, so the controlled-change flag also works when this file is run statement by statement
+  PERFORM set_config('almas.controlled_change', 'on', true);
+  UPDATE core.setting SET value = 'last_purchase', updated_by = 'owner-decision-D-11', updated_at = now() WHERE key = 'below_cost_basis';
+  PERFORM set_config('almas.controlled_change', 'off', true);
+END $$;
 INSERT INTO core.audit_event (actor, action, object_type, object_id, before, after, reason)
 VALUES ('owner-decision-D-11', 'change', 'setting', 'below_cost_basis', '{"value": "undecided"}', '{"value": "last_purchase"}',
         'Owner decision D-11 (1405/07): below-cost control uses the last purchase price of the item');
