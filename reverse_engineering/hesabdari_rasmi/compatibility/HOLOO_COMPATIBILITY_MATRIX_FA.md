@@ -21,10 +21,10 @@
 
 | وضعیت آینده | تعداد |
 |---|---:|
-| READER_READY | 35 |
+| READER_READY | 31 |
 | TODO | 25 |
 | DESIGNED | 17 |
-| VERIFIED | 11 |
+| VERIFIED | 15 |
 | IMPLEMENTED | 7 |
 
 ## حسابداری
@@ -73,10 +73,10 @@
 |---|---|---|---|---|---|---|---|---|
 | SAL-01 | فاکتور فروش (سرفصل + ردیف) | `FACTURE/FACTART Fac_Type=F` | PROVEN | 19,877 | MUST | A | C-09؛ جمع هر فاکتور، ردیف‌ها، روش تسویه برابر | READER_READY |
 | SAL-02 | روش‌های تسویه فاکتور (نقد/کارت/چک/نسیه) | `FNaghd/Card/FCheck/FNesieh` | PROVEN | همه | MUST | B | مجموع هر روش در سال برابر | READER_READY |
-| SAL-03 | سند خودکار فروش با ردیف‌های دریافت همان لحظه | `Sanad_Type 13` | PROVEN | همه | MUST | B | سند بازتولیدشده = سند هلو برای 100% فاکتورها | READER_READY |
+| SAL-03 | سند خودکار فروش با ردیف‌های دریافت همان لحظه | `Sanad_Type 13` | PROVEN | همه | MUST | B | قاعده ثبت core.document_posting_lines: ۱۹,۸۷۷/۱۹,۸۷۷ سند فروش عیناً برابر سند هلو (migration/posting_parity.py) | VERIFIED |
 | SAL-04 | ثبت فروش از وب‌سرویس + شماره سفارش در شرح | `Process (وب سرویس)، Fac_Comment «…/شماره»، UserCode=3` | PROVEN | 20,083 | MUST | B | شماره سفارش استخراج و یکتا؛ تطبیق با سامانه فروش | READER_READY |
 | SAL-05 | ابطال فاکتور فروش | `Fac_Type Q + SND_LIST.Show_Daftar=0 + TaxLog SendType 3` | PROVEN | 4 | MUST | C | جایگزین: ابطال با سند معکوس خودکار + مؤدیان | READER_READY |
-| SAL-06 | برگشت از فروش | `Fac_Type Y؛ سند 14` | PROVEN | 5 | MUST | B | مبالغ و اثر انبار برابر | READER_READY |
+| SAL-06 | برگشت از فروش | `Fac_Type Y؛ سند 14` | PROVEN | 5 | MUST | B | برگشت از فروش: ۵/۵ سند عیناً برابر هلو | VERIFIED |
 | SAL-07 | فاکتور اشانتیون (مبلغ صفر) | `F با Sum_Price=0` | PROVEN | 4 | SHOULD | B | — | TODO |
 | SAL-08 | تخفیف ردیف/فاکتور، پورسانت، واسطه | `DarsadTakhfif, Takhfif, DarsadPorsant, Vaseteh_Code` | PROVEN | استفاده نشده | OPTIONAL | D | — | TODO |
 | SAL-09 | سطوح قیمت فروش (۱۰۰ سطح) و ArticlePrice | `ARTICLE.Sel_Price1..100, ArticlePrice` | NEEDS_MORE_EVIDENCE | کم | SHOULD | C | جایگزین: فهرست قیمت نسخه‌دار | TODO |
@@ -92,8 +92,8 @@
 
 | ID | قابلیت | منبع داده هلو | اثبات | کاربرد ۱۴۰۴ | نیاز | دسته | آزمون برابری | وضعیت |
 |---|---|---|---|---|---|---|---|---|
-| PUR-01 | فاکتور خرید | `FACTURE/FACTART K؛ سند 14` | PROVEN | 942 | MUST | A | مبالغ، ردیف‌ها و اثر میانگین برابر | READER_READY |
-| PUR-02 | برگشت از خرید | `X؛ سند 13` | PROVEN | 1 | MUST | A | برابر | READER_READY |
+| PUR-01 | فاکتور خرید | `FACTURE/FACTART K؛ سند 14` | PROVEN | 942 | MUST | A | قاعده ثبت: ۹۴۲/۹۴۲ سند خرید عیناً برابر سند هلو | VERIFIED |
+| PUR-02 | برگشت از خرید | `X؛ سند 13` | PROVEN | 1 | MUST | A | قاعده ثبت: ۱/۱ برگشت از خرید عیناً برابر سند هلو | VERIFIED |
 | PUR-03 | اقلام خدماتی در فاکتور خرید (کارمزد/حمل) | `FACTART روی کالاهای 01xxx` | PROVEN | فعال | SHOULD | C | جایگزین: هزینه‌های جانبی خرید با تسهیم | TODO |
 | PUR-04 | بالاترین خرید از اشخاص | `گزارش هلو` | PROVEN | فعال | SHOULD | A | برابر | TODO |
 
