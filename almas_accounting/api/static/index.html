@@ -23,7 +23,10 @@ label{color:var(--muted);font-size:13px}select,input{font:inherit;padding:6px 8p
 <body>
 <header>
   <h1>حسابداری رسمی الماس شهر</h1>
-  <div class="row" style="margin:0"><label>کاربر <input id="user" size="12" autocomplete="username"></label><button class="btn" id="login">ورود</button></div>
+  <div class="row" style="margin:0"><label>کاربر <input id="user" size="10" autocomplete="username"></label>
+    <label>رمز <input id="pass" type="password" size="12" autocomplete="current-password"></label>
+    <label>کد یکبار مصرف <input id="otp" size="6" inputmode="numeric" autocomplete="one-time-code" placeholder="اگر دارید"></label>
+    <button class="btn" id="login">ورود</button><button class="btn" id="logout">خروج</button></div>
 </header>
 <main>
   <nav role="tablist" id="nav"></nav>
@@ -64,12 +67,18 @@ const todayIso = new Date().toISOString().slice(0, 10);
 const dateInput = (id) => `<label>تاریخ <input id="${id}" class="jd" value="${jdate(todayIso)}" size="10" placeholder="۱۴۰۵/۰۱/۰۱"></label>`;
 function readDate(id) { const iso = j2iso($('#' + id).value); if (!iso) throw new Error('تاریخ شمسی نامعتبر است (نمونه: ۱۴۰۵/۰۷/۰۵).'); return iso; }
 
-let user = ''; try { user = sessionStorage.getItem('almas_user') || ''; } catch (e) {}
+// sign-in (W-14): a session token from /auth/login is kept for this tab only; the password is never stored.
+// Without a password the development header is sent (accepted only on a development server).
+let user = '', token = ''; try { user = sessionStorage.getItem('almas_user') || ''; token = sessionStorage.getItem('almas_token') || ''; } catch (e) {}
 $('#user').value = user;
+const keep = (k, v) => { try { v ? sessionStorage.setItem(k, v) : sessionStorage.removeItem(k); } catch (e) {} };
 async function api(path, body) {
-  const r = await fetch(path, {method: body ? 'POST' : 'GET', headers: {'X-Almas-User': user, 'Content-Type': 'application/json'},
-                               body: body ? JSON.stringify(body) : undefined});
-  const j = await r.json(); if (!r.ok) throw new Error(j.detail || r.status); return j;
+  const headers = {'Content-Type': 'application/json', ...(token ? {Authorization: 'Bearer ' + token} : {'X-Almas-User': user})};
+  const r = await fetch(path, {method: body ? 'POST' : 'GET', headers, body: body ? JSON.stringify(body) : undefined});
+  const j = await r.json();
+  if (r.status === 401 && token) { token = ''; keep('almas_token', ''); }
+  if (!r.ok) { const e = new Error(j.detail || r.status); e.status = r.status; throw e; }
+  return j;
 }
 const op = (name, args) => api('/operations/' + name, {args}).then(j => j.rows);
 const one = rows => Object.values(rows[0])[0];
@@ -245,6 +254,30 @@ const views = {
     return '<div class="card"><h2>پرونده‌های من</h2>' + table(cases, [['beta_order_id', 'شناسه بانک'], ['customer_name', 'خریدار'], ['total_amount', 'مبلغ کل'],
         ['installments', 'اقساط'], ['paid_count', 'پرداخت‌شده'], ['overdue_count', 'معوق'], ['outstanding', 'مانده مشتری'], ['next_due', 'سررسید بعدی'], ['next_amount', 'مبلغ قسط بعدی']]) +
       '</div><div class="card"><h2>مشتریان من</h2>' + table(cust, [['name', 'نام'], ['national_id', 'کد ملی'], ['contracts', 'قرارداد'], ['outstanding', 'مانده'], ['overdue_count', 'قسط معوق']]) + '</div>';
+  },
+  async pwchange() {
+    window._after = () => $('#pwsave').onclick = async () => {
+      try { if ($('#pwnew').value !== $('#pwnew2').value) throw new Error('دو رمز تازه یکی نیستند.');
+            await api('/auth/password', {current_password: $('#pwcur').value, new_password: $('#pwnew').value}); start(); }
+      catch (e) { $('#pwmsg').innerHTML = `<p class="err">${e.message}</p>`; } };
+    return `<div class="card"><h2>تغییر رمز لازم است</h2><div class="row"><label>رمز فعلی <input id="pwcur" type="password" autocomplete="current-password"></label>
+      <label>رمز تازه (دست‌کم ۱۰ نویسه) <input id="pwnew" type="password" autocomplete="new-password"></label><label>تکرار <input id="pwnew2" type="password" autocomplete="new-password"></label>
+      <button class="btn primary" id="pwsave">ذخیره</button></div><div id="pwmsg"></div></div>`;
+  },
+  async mfa() {
+    window._after = () => {
+      $('#mfastart').onclick = async () => {
+        try { const e = await api('/auth/mfa/enroll', {password: $('#mfapw').value}); window._mfa = e;
+              $('#mfasecret').innerHTML = `<p>این کلید را در برنامه احراز هویت (مثل Google Authenticator) وارد کنید:</p><p style="direction:ltr;font-family:monospace;font-size:17px">${e.secret.replace(/(.{4})/g, '$1 ')}</p>
+                <p class="muted" style="direction:ltr;word-break:break-all">${e.otpauth_uri}</p>
+                <div class="row"><label>کد ۶ رقمی برنامه <input id="mfacode" size="6" inputmode="numeric"></label><button class="btn primary" id="mfaok">تأیید</button></div>`;
+              $('#mfaok').onclick = async () => { try { await api('/auth/mfa/confirm', {pending: window._mfa.pending, code: latin($('#mfacode').value)});
+                  $('#mfamsg').innerHTML = '<p class="zero">ورود دومرحله‌ای فعال شد. دوباره با کد وارد شوید.</p>'; await api('/auth/logout', {}); token = ''; keep('almas_token', ''); }
+                catch (err) { $('#mfamsg').innerHTML = `<p class="err">${err.message}</p>`; } }; }
+        catch (err) { $('#mfamsg').innerHTML = `<p class="err">${err.message}</p>`; } };
+    };
+    return `<div class="card"><h2>فعال‌سازی ورود دومرحله‌ای (لازم برای مجوزهای حساس)</h2><div class="row"><label>رمز <input id="mfapw" type="password"></label>
+      <button class="btn primary" id="mfastart">شروع</button></div><div id="mfasecret"></div><div id="mfamsg"></div></div>`;
   },
   async ops() {
     const rows = await api('/operations');
@@ -438,10 +471,29 @@ function drawNav() {
 }
 async function start() {
   isAgent = false;
-  if (user) { try { isAgent = !(await api('/operations')).some(o => o.operation === 'controls.inbox'); } catch (e) {} }
+  if (user) {
+    try { isAgent = !(await api('/operations')).some(o => o.operation === 'controls.inbox'); }
+    catch (e) {
+      if (e.status === 403 && /password change/.test(e.message)) { $('#nav').innerHTML = ''; return showView('pwchange'); }
+      if (e.status === 403 && /second factor/.test(e.message)) { $('#nav').innerHTML = ''; return showView('mfa'); }
+      if (e.status === 401) { $('#nav').innerHTML = ''; $('#view').innerHTML = `<p class="err">${e.message}</p>`; return; }
+    }
+  }
   drawNav(); show(current);
 }
-$('#login').onclick = () => { user = $('#user').value.trim(); try { sessionStorage.setItem('almas_user', user); } catch (e) {} start(); };
+async function showView(v) { window._after = null; $('#view').innerHTML = await views[v](); if (window._after) window._after(); }
+$('#login').onclick = async () => {
+  user = $('#user').value.trim(); keep('almas_user', user); token = ''; keep('almas_token', '');
+  const pw = $('#pass').value;
+  if (pw) {
+    try { const r = await api('/auth/login', {username: user, password: pw, otp: latin($('#otp').value.trim()) || null}); token = r.token; keep('almas_token', token); }
+    catch (e) { $('#nav').innerHTML = ''; $('#view').innerHTML = `<p class="err">${e.message}</p>`; return; }
+    finally { $('#pass').value = ''; $('#otp').value = ''; }
+  }
+  start();
+};
+$('#logout').onclick = async () => { try { if (token) await api('/auth/logout', {}); } catch (e) {} token = ''; keep('almas_token', ''); user = ''; keep('almas_user', '');
+  $('#user').value = ''; $('#nav').innerHTML = ''; $('#view').innerHTML = '<p class="muted">خارج شدید.</p>'; };
 start();
 </script>
 </body>
