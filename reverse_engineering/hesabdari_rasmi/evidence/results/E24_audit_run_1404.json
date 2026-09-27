@@ -1,5 +1,5 @@
 {
- "started_at": "2026-09-27T11:34:34",
+ "started_at": "2026-09-27T16:52:04",
  "source_db": "holoo1_1404",
  "fiscal_year": "1404",
  "01_ledger_migration": {
@@ -16,7 +16,7 @@
    "skipped_no_visible_lines": 8,
    "entries_created": 47439
   },
-  "seconds": 177
+  "seconds": 17
  },
  "02_ledger_rerun_is_noop": {
   "result": {
@@ -28,7 +28,7 @@
    "skipped_no_visible_lines": 0,
    "entries_created": 0
   },
-  "seconds": 3
+  "seconds": 4
  },
  "03_ledger_parity_mirror": {
   "result": {
@@ -63,9 +63,10 @@
    "type:received": 7749,
    "type:issued": 80,
    "chain_conflict": 2,
+   "closed_before_migration": 208,
    "conflict_examples": 2
   },
-  "seconds": 367
+  "seconds": 375
  },
  "05_cheque_voucher_parity": {
   "result": {
@@ -224,7 +225,7 @@
    "different": 0,
    "difference_levels": []
   },
-  "seconds": 4
+  "seconds": 5
  },
  "12_report_party_balance_function": {
   "result": {
@@ -256,18 +257,19 @@
    "same_final_balance": 120,
    "same_line_order": 120
   },
-  "seconds": 33
+  "seconds": 31
  },
  "15_report_cheque_states": {
   "result": {
    "holoo_cheques": 12515,
-   "core_cheques_with_events": 12307,
-   "compared": 12307,
-   "same_state": 12305,
+   "core_cheques_with_status": 12515,
+   "of_which_closed_before_migration": 208,
+   "compared": 12515,
+   "same_state": 12513,
    "different": {
     "received → endorsed_to_party": 2
    },
-   "only_in_holoo": 208,
+   "only_in_holoo": 0,
    "holoo_state_distribution": {
     "collected": 9106,
     "received": 1094,
@@ -282,7 +284,7 @@
     "returned_by_endorsee": 2
    }
   },
-  "seconds": 17
+  "seconds": 18
  },
  "16_inventory_migration": {
   "result": {
@@ -331,7 +333,39 @@
     "core": 2
    }
   },
-  "seconds": 5
+  "seconds": 4
  },
- "finished_at": "2026-09-27T11:46:12"
+ "19_tax_submission_migration": {
+  "result": {
+   "submissions": 20608,
+   "invoice_flags": 20734
+  },
+  "seconds": 0
+ },
+ "20_tax_status_parity_and_controls": {
+  "result": {
+   "by_type": {
+    "F:holoo_state=0 core_last=None": 4,
+    "F:holoo_state=0 core_last=accepted": 60,
+    "F:holoo_state=2 core_last=None": 2,
+    "F:same": 19811,
+    "K:holoo_state=0 core_last=None": 846,
+    "Q:same": 4,
+    "X:holoo_state=0 core_last=None": 1,
+    "Y:holoo_state=0 core_last=None": 1,
+    "Y:holoo_state=2 core_last=None": 2,
+    "Z:holoo_state=0 core_last=None": 3
+   },
+   "controls": {
+    "T-01": 0,
+    "T-02": 11,
+    "T-03": 1,
+    "T-04": 571,
+    "T-05": 51,
+    "T-06": 60
+   }
+  },
+  "seconds": 0
+ },
+ "finished_at": "2026-09-27T17:01:10"
 }

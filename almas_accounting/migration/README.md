@@ -156,7 +156,7 @@ python -m migration.treasury_parity --pg DSN --source-db holoo1_1404
 ## اجرای یکجای ممیزی (`audit_run.py`؛ E24)
 همه مراحل بالا، از پایگاه تازه، به ترتیب و در یک اجرا انجام می‌شود:
 دفتر ← چک ← خزانه ← تسویه و سن‌بندی ← برابری گزارش‌ها ← موجودی ← بستن سال.
-خروجی فقط آمار تجمیعی است (`reverse_engineering/hesabdari_rasmi/evidence/results/E24_audit_run_1404.json`). اجرای ۱۴۰۴: ۱۸ مرحله، **بدون خطا**، ۱۲ دقیقه. انتقال دفتر ۱۷۷ ثانیه طول کشید؛ پیش از `ANALYZE` بیش از ۹ دقیقه بود.
+خروجی فقط آمار تجمیعی است (`reverse_engineering/hesabdari_rasmi/evidence/results/E24_audit_run_1404.json`). اجرای ۱۴۰۴: ۲۰ مرحله (همراه با سابقه مؤدیان)، **بدون خطا**، ۹ دقیقه. انتقال دفتر ۱۷۷ ثانیه طول کشید؛ پیش از `ANALYZE` بیش از ۹ دقیقه بود.
 ```bash
 HOLOO_SQL_PASSWORD=... python -m migration.audit_run --pg DSN --source-db holoo1_1404 --sql-db holoo1_1404 --year 1404 --out audit.json
 ```
