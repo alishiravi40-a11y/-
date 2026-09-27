@@ -21,11 +21,11 @@
 
 | وضعیت آینده | تعداد |
 |---|---:|
-| VERIFIED | 26 |
-| READER_READY | 25 |
-| TODO | 25 |
-| DESIGNED | 11 |
-| IMPLEMENTED | 8 |
+| VERIFIED | 30 |
+| READER_READY | 24 |
+| TODO | 24 |
+| IMPLEMENTED | 9 |
+| DESIGNED | 8 |
 
 ## حسابداری
 
@@ -40,16 +40,16 @@
 | ACC-07 | انواع سند (فروش/خرید/دستی/دریافت/پرداخت/انتقال/چک/کارمزد) | `SANAD.Sanad_Type` | PROVEN | فعال | MUST | A | توزیع انواع و الگوی حساب هر نوع برابر | READER_READY |
 | ACC-08 | نوع ردیف (F/S/Z/خالی) برای ارتباط ردیف با فاکتور و تسویه | `SND_LIST.Type_Line` | PROVEN | فعال | MUST | B | Type_Line هر ردیف حفظ و به نقش معنایی نگاشت | READER_READY |
 | ACC-09 | ردیف خارج از دفتر (Show_Daftar=0) — سازوکار ابطال فاکتور | `SND_LIST.Show_Daftar` | PROVEN | 14 ردیف | MUST | C | Reader: ردیف‌های پنهان خارج از دفتر؛ سیستم جدید: سند معکوس به‌جای پنهان‌سازی | READER_READY |
-| ACC-10 | افتتاحیه/بستن موقت/اختتامیه | `SANAD.sanad_state 1/2/3؛ حساب 005/006` | PROVEN | فعال | MUST | B | سند بستن بازتولیدشده = سند هلو؛ همه حساب‌ها پس از اختتامیه صفر (R-07) | VERIFIED |
+| ACC-10 | افتتاحیه/بستن موقت/اختتامیه | `SANAD.sanad_state 1/2/3؛ حساب 005/006` | PROVEN | فعال | MUST | B | قاعده core.year_end_lines (011): بستن موقت و اختتامیه ۱۴۰۴ از روی دفتر هسته عیناً برابر اسناد هلو (E22)؛ افتتاحیه سال بعد تولیدی و قفل | VERIFIED |
 | ACC-11 | موجودی ادواری و COGS در بستن سال | `اسناد بستن + ARTICLE.Exist×Buy_Price` | PROVEN | فعال | MUST | B | COGS=7,699,284,125,059 بازتولید شود | VERIFIED |
 | ACC-12 | مانده حساب (دفتر کل/معین/تفصیلی) | `MandehOfSarfasl, W_SarfaslMandeh` | PROVEN | گزارش پرکاربرد | MUST | A | مانده ۱۰,۰۳۸ کد (کل/معین/تفصیلی) در هسته جدید = View هلو MandehOfSarfasl (صفر اختلاف) | VERIFIED |
 | ACC-13 | Cache مانده حساب | `SARFASL.Mandeh` | PROVEN | فعال | NO | C | جایگزین: محاسبه/Materialized view با کنترل | DESIGNED |
 | ACC-14 | نسخه‌های سند افتتاحیه | `Sanad_Edit, snd_list_Edit` | PROVEN | 12 | MUST | B | همه نسخه‌ها Import و قابل مقایسه | READER_READY |
-| ACC-15 | دفتر روزنامه، دفتر معین، مرور حساب | `گزارش‌های هلو (Log A4)؛ تابع Calc_BedBes_UseInFuncDateBetween2` | PROVEN | 143+13+8 اجرا | MUST | A | P-05: گردش ماهانه بدهکار/بستانکار همه اشخاص = تابع خود هلو (31,588 مقدار، صفر اختلاف)؛ View analytics.trial_balance_4col | VERIFIED |
-| ACC-16 | ترازنامه آزمایشی ۲/۴/۶/۸ ستونی | `گزارش هلو (محاسبه در برنامه، نه در DB)` | PROVEN | 13 اجرا | MUST | A | analytics.trial_balance_4col؛ مانده پایان = P-01 (View هلو)؛ گردش دوره اشخاص = P-05؛ خروجی چاپی هلو برای مقایسه کامل لازم است | READER_READY |
+| ACC-15 | دفتر روزنامه، دفتر معین، مرور حساب | `گزارش‌های هلو (Log A4)؛ تابع Calc_BedBes_UseInFuncDateBetween2` | PROVEN | 143+13+8 اجرا | MUST | A | core.account_ledger: مانده پایان هر روز ۹,۹۵۵ حساب/شخص = هلو (۴۰,۴۲۶ حساب-روز)؛ اجرای خود spMoienAshkhas برای ۱۲۰ حساب: همان ردیف‌ها و مانده‌ها (E20) | VERIFIED |
+| ACC-16 | ترازنامه آزمایشی ۲/۴/۶/۸ ستونی | `گزارش هلو (محاسبه در برنامه، نه در DB)` | PROVEN | 13 اجرا | MUST | A | core.trial_balance_levels: تراز چهارستونی ۱۲ ماه + سال، در سه سطح، ۹۳,۱۰۵ کد-دوره صفر اختلاف با قاعده هلو (E20) | VERIFIED |
 | ACC-17 | مرکز هزینه | `SND_LIST.MHaz_Code` | PROVEN | استفاده نشده | OPTIONAL | D | — | TODO |
 | ACC-18 | ارز | `SND_LIST.Bed_Arz/ArzId, MONEY` | PROVEN | استفاده نشده | OPTIONAL | D | — | TODO |
-| ACC-19 | حساب‌های انتظامی (چک ضمانت) | `001/002, TAZMIN` | PROVEN | 399 چک | MUST | A | مانده انتظامی = جمع TAZMIN باز | DESIGNED |
+| ACC-19 | حساب‌های انتظامی (چک ضمانت) | `001/002, TAZMIN` | PROVEN | 399 چک | MUST | A | دفتر ضمانت با ضامن الزامی؛ ۲۷۲ سند انتظامی برابر (E19) | VERIFIED |
 | ACC-20 | کارتابل/تأیید/قطعی‌سازی سند | `SANAD.End_Save, Review, StateSanadForKartabl` | PROVEN | استفاده نشده | MUST | C | جایگزین: چرخه پیش‌نویس→ثبت→قطعی + قفل دوره/سال با مجوز period.close/period.reopen، علت و Audit (D-05)؛ core test_d05_* | IMPLEMENTED |
 | ACC-21 | کنترل پنجره زمانی ثبت سند برای کاربر | `USERDB.InsSanadBefor/SanadTimeInsertValueBefore, EnterPriorDate` | NEEDS_MORE_EVIDENCE | 5 کاربر | MUST | C | جایگزین: ثبت در هر دوره باز (D-05) + قفل دوره با مجوز و Audit؛ core test_d05_* | IMPLEMENTED |
 
@@ -61,7 +61,7 @@
 | PER-02 | نقش شخص (خریدار/فروشنده/واسطه/پرسنل/…) | `CUSTOMER.Kharid/Forosh/Vaseteh/…` | PROVEN | تقریباً همه | SHOULD | C | جایگزین: نقش استنتاجی از رفتار + نقش صریح | DESIGNED |
 | PER-03 | دو حساب بدهکار/بستانکار برای هر شخص | `CUSTOMER.*_Bed/*_Bes, CustomerSarfasl` | PROVEN | 306 شخص دوحسابی/تک‌بستانکار | MUST | B | مانده شخص = اجتماع دو حساب | VERIFIED |
 | PER-04 | مانده و گردش شخص | `W_Calc_Mandeh_Customer, F_Calc_BedBes_UseInView` | PROVEN | فعال | MUST | A | مانده هر شخص قبل از بستن برابر | VERIFIED |
-| PER-05 | سقف اعتبار، مهلت تسویه | `CUSTOMER.Etebar, MohlatTasvieh` | PROVEN | بسیار کم | SHOULD | C | جایگزین: سیاست اعتباری + امتیاز ریسک | DESIGNED |
+| PER-05 | سقف اعتبار، مهلت تسویه | `CUSTOMER.Etebar, MohlatTasvieh` | PROVEN | بسیار کم | SHOULD | C | مهلت تسویه (party.payment_terms_days ← CUSTOMER.MohlatTasvieh) مبنای سررسید در سن‌بندی؛ سقف اعتبار در مدل | IMPLEMENTED |
 | PER-06 | لیست سیاه | `CUSTOMER.InListSiah (+ برچسب در نام)` | PROVEN | 8 | MUST | B | همه لیست سیاه + نام‌های دارای «بد حساب» پرچم بخورند | READER_READY |
 | PER-07 | گروه پیامک | `CUSTOMER.SMSGroup` | PROVEN | فعال | SHOULD | A | گروه‌ها Import شوند | TODO |
 | PER-08 | شهر/منطقه شخص و گزارش فروش استان/شهر | `CUSTOMER.City_Code→CITY` | PROVEN | 4 اجرای گزارش | SHOULD | A | فروش به تفکیک شهر برابر | TODO |
@@ -135,8 +135,8 @@
 | TRE-04 | پرداخت | `سند 5` | PROVEN | فعال | MUST | A | ۲۷۲ سند پرداخت عیناً برابر، از جمله پرداخت با تخفیف نقدی خرید (E19) | VERIFIED |
 | TRE-05 | انتقال بین بانک‌ها / واریز POS | `سند 1` | PROVEN | فعال | MUST | A | ۴,۷۳۴ سند انتقال عیناً برابر؛ انتقال چندمبدأ به چند سند انتقال تفکیک می‌شود (E19) | VERIFIED |
 | TRE-06 | کارمزد بانکی | `سند 7/20 → 6010009` | PROVEN | فعال | MUST | A | ۲۱۰ سند کارمزد + کارمزد داخل انتقال‌ها عیناً برابر؛ ۱۸ سند نوع ۷ که کارمزد نیستند (W-33) با نوع درست ثبت می‌شوند | VERIFIED |
-| TRE-07 | تسویه فاکتور نسیه (تخصیص دریافت به فاکتور) | `— (وجود ندارد)` | PROVEN | ندارد | MUST | C | قابلیت جدید: تخصیص FIFO/دستی + سن‌بندی | DESIGNED |
-| TRE-08 | ریز عملکرد بانک | `گزارش هلو` | PROVEN | فعال | MUST | A | برابر | TODO |
+| TRE-07 | تسویه فاکتور نسیه (تخصیص دریافت به فاکتور) | `— (وجود ندارد)` | PROVEN | ندارد | MUST | C | قابلیت جدید (008): تسویه ردیف‌به‌ردیف با مجوز و Undo، FIFO، سن‌بندی به تاریخ؛ روی کل ۱۴۰۴: ۹,۶۴۰ حساب فرعی، سن‌بندی = مانده دفتر در ۱۲ پایان ماه (E21) | VERIFIED |
+| TRE-08 | ریز عملکرد بانک | `گزارش هلو` | PROVEN | فعال | MUST | A | ریز عملکرد ۶۱ حساب بانک و صندوق = هلو (مانده پایان هر روز، E20)؛ مغایرت‌گیری بانکی (010) قابلیت جدید | VERIFIED |
 | TRE-09 | اقساط | `GHEST` | PROVEN | کم | OPTIONAL | D | — | TODO |
 
 ## چک

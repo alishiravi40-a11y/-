@@ -29,7 +29,7 @@ def seed(db, run="run1"):
     for c, n, d, cr in PERSONS:
         db.execute("INSERT INTO holoo_mirror.person VALUES (%s,%s,%s,%s,NULL,NULL,%s,%s,%s,NULL)", (DB, c, n, n.replace(" ", ""), d, cr, "h" + c))
     for s, d, st, lines in VOUCHERS:
-        db.execute("INSERT INTO holoo_mirror.voucher VALUES (%s,%s,%s,%s,%s,NULL)", (DB, s, d, st, f"v{s}"))
+        db.execute("INSERT INTO holoo_mirror.voucher (source_db, sanad_code, doc_date, state, comment) VALUES (%s,%s,%s,%s,%s)", (DB, s, d, st, f"v{s}"))
         for i, (a, dr, cr, vis) in enumerate(lines, 1):
             db.execute("INSERT INTO holoo_mirror.voucher_line VALUES (%s,%s,%s,%s,%s,%s,NULL,%s,NULL)", (DB, s, i, a, dr, cr, vis))
 
@@ -81,7 +81,7 @@ def test_newer_backup_supersedes_changed_and_reverses_removed(db):
     db.execute("UPDATE holoo_mirror.voucher_line SET credit = 350 WHERE sanad_code = 2 AND line_index = 2")
     db.execute("UPDATE holoo_mirror.voucher SET removed_run = 'run2' WHERE sanad_code = 5")
     db.execute("UPDATE holoo_mirror.voucher_line SET removed_run = 'run2' WHERE sanad_code = 5")
-    db.execute("INSERT INTO holoo_mirror.voucher VALUES (%s, 6, '2025-07-01', 'normal', 'v6', NULL)", (DB,))
+    db.execute("INSERT INTO holoo_mirror.voucher (source_db, sanad_code, doc_date, state, comment) VALUES (%s, 6, '2025-07-01', 'normal', 'v6')", (DB,))
     db.execute("INSERT INTO holoo_mirror.voucher_line VALUES (%s,6,1,'1010001',10,0,NULL,true,NULL),(%s,6,2,'9010001',0,10,NULL,true,NULL)", (DB, DB))
     st = M.migrate(db, DB, "1404", "run2")
     assert (st["superseded"], st["removed_in_source"], st["entries_created"]) == (1, 1, 2)

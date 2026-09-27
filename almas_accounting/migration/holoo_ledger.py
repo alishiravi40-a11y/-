@@ -127,11 +127,11 @@ def migrate(conn, source_db: str, fiscal_year: str, run_id: str | None = None) -
         if unmapped:
             raise RuntimeError(f"{unmapped} visible Holoo lines have no mapped account")
         conn.execute("""CREATE TEMP TABLE vh AS
-            SELECT v.sanad_code, v.doc_date, v.state, v.comment,
+            SELECT v.sanad_code, coalesce(v.number, v.sanad_code) AS number, v.doc_date, v.state, v.comment,
                    md5(v.doc_date::text || '|' || v.state || '|' || coalesce(string_agg(vl.account_code || ':' || vl.debit || ':' || vl.credit || ':' ||
                        coalesce(vl.description, ''), ';' ORDER BY vl.line_index), '')) AS h, count(vl.*) AS n
             FROM holoo_mirror.voucher v LEFT JOIN vl ON vl.sanad_code = v.sanad_code
-            WHERE v.source_db = %(db)s AND v.removed_run IS NULL GROUP BY v.sanad_code, v.doc_date, v.state, v.comment""", {"db": source_db})
+            WHERE v.source_db = %(db)s AND v.removed_run IS NULL GROUP BY v.sanad_code, v.number, v.doc_date, v.state, v.comment""", {"db": source_db})
         # unchanged → lineage only
         stats["unchanged"] = conn.execute("""UPDATE core.legacy_entry_map m SET last_seen_run = %s FROM vh
             WHERE m.source_db = %s AND m.sanad_code = vh.sanad_code AND m.status IN ('current', 'skipped_no_visible_lines')
@@ -158,7 +158,8 @@ def migrate(conn, source_db: str, fiscal_year: str, run_id: str | None = None) -
         # new entries: insert as drafts with lines, then post (entry rules: period, balance, leaf, party)
         stats["entries_created"] = conn.execute("""
             INSERT INTO core.journal_entry (number, fiscal_year_id, period_id, effective_date, kind, source, source_ref, description, created_by)
-            SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM core.journal_entry x WHERE x.fiscal_year_id = %(fy)s AND x.number = n.sanad_code) THEN n.sanad_code END,
+            -- the voucher number people see in Holoo (Sanad_Code_C, unique in 1404); Holoo's ledgers are ordered by it
+            SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM core.journal_entry x WHERE x.fiscal_year_id = %(fy)s AND x.number = n.number) THEN n.number END,
                    %(fy)s, p.id, n.doc_date, coalesce(%(kind)s::jsonb ->> n.state, 'normal'), 'holoo', %(db)s || ':' || n.sanad_code, n.comment, %(u)s
             FROM newv n JOIN core.period p ON p.fiscal_year_id = %(fy)s AND n.doc_date BETWEEN p.starts_on AND p.ends_on WHERE n.n > 0""",
             {"fy": fid, "kind": json.dumps(KIND), "db": source_db, "u": USER}).rowcount
