@@ -1,0 +1,41 @@
+:root{--bg:#f6f6f3;--card:#fff;--ink:#1f2328;--muted:#5f6670;--line:#e3e3df;--accent:#1f6f5c;--accent-ink:#fff;--high:#b42318;--medium:#b54708;--low:#475467;--ok:#067647;--hover:#eef3f1}
+@media (prefers-color-scheme:dark){:root{--bg:#141619;--card:#1c1f23;--ink:#e8e8e6;--muted:#a3a8ae;--line:#2c3036;--accent:#4fb39a;--accent-ink:#0d1512;--high:#f97066;--medium:#fdb022;--low:#98a2b3;--ok:#47cd89;--hover:#23282d}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 Vazirmatn,Tahoma,system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:5}
+.brand{font-weight:700;font-size:17px;color:var(--ink);text-decoration:none}
+.layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 60px)}
+nav#nav{border-left:1px solid var(--line);background:var(--card);padding:10px 8px;overflow-y:auto}
+.navgroup{margin-bottom:10px}.navtitle{color:var(--muted);font-size:12px;padding:4px 10px}
+nav#nav a{display:block;padding:6px 10px;border-radius:8px;color:var(--ink);text-decoration:none}
+nav#nav a:hover{background:var(--hover)}nav#nav a.on{background:var(--accent);color:var(--accent-ink)}
+main{padding:16px;max-width:1250px;width:100%;min-width:0}
+.pagetitle{font-size:19px;margin:0 0 12px}
+h2{font-size:15px;margin:2px 0 10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{color:var(--muted);font-weight:600;font-size:13px}td.num{direction:ltr;text-align:left}
+tr.link{cursor:pointer}tr.link:hover td{background:var(--hover)}tr.total td{font-weight:700;border-top:2px solid var(--line)}
+.btn{display:inline-block;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 13px;border-radius:8px;cursor:pointer;font:inherit;text-decoration:none}
+.btn:hover{background:var(--hover)}.btn:disabled{opacity:.5;cursor:wait}
+.primary,.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{border-color:var(--high);color:var(--high)}
+label{color:var(--muted);font-size:13px}
+select,input{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);max-width:100%}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:10px}
+.muted{color:var(--muted)}.err{color:var(--high)}.zero{color:var(--ok)}.big{font-size:17px;font-weight:700}
+.small{font-size:12px}.mono{direction:ltr;font-family:ui-monospace,monospace;font-size:16px;word-break:break-all}
+.sev{font-weight:700}.sev.high{color:var(--high)}.sev.medium{color:var(--medium)}.sev.low,.sev.info{color:var(--low)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-bottom:12px}
+.tile{display:flex;flex-direction:column;gap:2px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;color:var(--ink);text-decoration:none}
+.tile:hover{border-color:var(--accent)}.tlabel{color:var(--muted);font-size:13px}.tvalue{font-size:20px;font-weight:700;direction:ltr;text-align:right}
+#search{position:relative;flex:1;max-width:460px}#q{width:100%}
+#results{position:absolute;top:100%;right:0;left:0;background:var(--card);border:1px solid var(--line);border-radius:10px;margin-top:4px;max-height:360px;overflow:auto;z-index:10}
+#results a{display:block;padding:7px 10px;color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line)}#results a:hover{background:var(--hover)}
+#results p{padding:8px 10px;margin:0}
+a{color:var(--accent)}
+@media (max-width:760px){.layout{grid-template-columns:1fr}nav#nav{border-left:0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:4px}
+  .navgroup{margin:0;display:contents}.navtitle{display:none}nav#nav a{padding:4px 8px;font-size:14px}}
