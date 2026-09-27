@@ -76,7 +76,8 @@ def test_ui_is_served_and_the_inbox_is_an_operation(client):
     c, ids, p = client
     assert c.get("/", follow_redirects=False).status_code in (302, 307)
     page = c.get("/ui/")
-    assert page.status_code == 200 and 'dir="rtl"' in page.text and "controls.inbox" in page.text
+    assert page.status_code == 200 and 'dir="rtl"' in page.text and "js/app.js" in page.text
+    assert c.get("/ui/js/pages/home.js").status_code == 200 and "controls.inbox" in c.get("/ui/js/pages/home.js").text
     rows = c.post("/operations/controls.inbox", json={"args": {"p_as_of": "2026-08-01"}}, headers=h("viewer")).json()["rows"]
     assert {r["area"] for r in rows} >= {"receivables", "tax", "cheques"}
 
@@ -121,3 +122,14 @@ def test_agent_screens_through_the_api(client, db):
     assert rep[0]["base_amount"] == "1000" and rep[0]["state_fa"] == "در بانک دیده نشده"
     ov = c.post("/operations/agents.overview", headers=h("boss"), json={"args": {}}).json()["rows"]
     assert ov[0]["owed_to_agent"] == "1000" and ov[0]["own_contracts_as_customer"] == 0
+
+
+def test_every_operation_the_ui_calls_is_catalogued(db):
+    """The UI holds no rule and no private door: every op('…') it calls must be a catalogued operation (AI-native)."""
+    import pathlib, re
+    root = pathlib.Path(__file__).parents[1] / "static" / "js"
+    used = set()
+    for f in root.rglob("*.js"):
+        used |= set(re.findall(r"\bop\('([a-z_.]+)'", f.read_text(encoding="utf-8")))
+    known = {r[0] for r in db.execute("SELECT operation FROM core.operation_catalog")}
+    assert used and used <= known, sorted(used - known)
