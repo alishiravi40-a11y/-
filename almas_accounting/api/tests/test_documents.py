@@ -78,3 +78,27 @@ def test_full_cycle_through_the_api(env, db):
     assert db.execute("SELECT count(*) FROM core.audit_event WHERE action = 'api_call'").fetchone()[0] >= 8
     assert call(c, "sales.create", {"p_date": "2026-04-05", "p_party": cus, "p_payments": [], "p_lines": [{"item_id": item, "quantity": 1, "unit_price": 1}]},
                 user="viewer")[0] == 403
+
+
+def test_form_lookups_voucher_and_settlement(env, db):
+    c, ids, sup, cus = env
+    item = call(c, "items.find", {"p_query": "گوشی"})[1]["rows"][0]["item_id"]
+    wh = call(c, "warehouses.list", {})[1]["rows"][0]["warehouse_id"]
+    cash = call(c, "money_accounts.list", {})[1]["rows"][0]["account_id"]
+    p = first(call(c, "purchase.create", {"p_date": "2026-04-01", "p_party": sup, "p_payments": [],
+                                          "p_lines": [{"item_id": item, "warehouse_id": wh, "quantity": 5, "unit_price": 1000}]})[1])
+    call(c, "purchase.finalize", {"p_invoice": p})
+    s = first(call(c, "sales.create", {"p_date": "2026-04-05", "p_party": cus, "p_payments": [],
+                                       "p_lines": [{"item_id": item, "warehouse_id": wh, "quantity": 4, "unit_price": 1500}]})[1])
+    call(c, "sales.finalize", {"p_invoice": s})
+    found = call(c, "invoices.find", {"p_kind": "sales", "p_query": "1"})[1]["rows"]
+    assert found[0]["invoice_id"] == s and found[0]["posted"] is True and found[0]["total"] == "6000"
+    assert call(c, "invoices.returnable", {"p_kind": "sales", "p_invoice": s})[1]["rows"][0]["returnable"] == "4.000"
+    v = call(c, "documents.voucher", {"p_source": "sales_invoice", "p_ref": str(s)})[1]["rows"]
+    assert sum(int(r["debit"]) for r in v) == sum(int(r["credit"]) for r in v) == 6000
+    call(c, "treasury.receive", {"p_party": cus, "p_money_account": cash, "p_amount": 6000, "p_date": "2026-04-06"})
+    sub = call(c, "ar.party_subledgers", {"p_party": cus})[1]["rows"][0]
+    assert sub["open_debit"] == "6000" and sub["open_credit"] == "6000" and sub["balance"] == "0"
+    db.execute("INSERT INTO core.user_permission (username, permission, granted_by) VALUES ('ops', 'ar.allocate', 't')")
+    assert call(c, "ar.allocate_fifo", {"p_account": sub["account_id"], "p_party": cus})[0] == 200
+    assert call(c, "ar.party_subledgers", {"p_party": cus})[1]["rows"][0]["open_debit"] == "0"

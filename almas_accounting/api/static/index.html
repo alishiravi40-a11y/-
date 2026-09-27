@@ -8,10 +8,10 @@
 @media (prefers-color-scheme:dark){:root{--bg:#141619;--card:#1c1f23;--ink:#e8e8e6;--muted:#a3a8ae;--line:#2c3036;--accent:#4fb39a;--high:#f97066;--medium:#fdb022;--low:#98a2b3;--ok:#47cd89}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 Vazirmatn,Tahoma,system-ui,sans-serif}
 header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--card)}
-h1{font-size:17px;margin:0}main{max-width:1100px;margin:0 auto;padding:16px}
+h1{font-size:17px;margin:0}h2{font-size:15px;margin:4px 0 10px}main{max-width:1100px;margin:0 auto;padding:16px}
 nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 nav button,.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 14px;border-radius:8px;cursor:pointer;font:inherit}
-nav button[aria-selected=true]{background:var(--accent);color:#fff;border-color:var(--accent)}
+nav button[aria-selected=true],.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th{color:var(--muted);font-weight:600}td.num{direction:ltr;text-align:left}
@@ -28,22 +28,45 @@ label{color:var(--muted);font-size:13px}select,input{font:inherit;padding:6px 8p
 <main>
   <nav role="tablist">
     <button role="tab" data-tab="inbox" aria-selected="true">کارتابل کنترل‌ها</button>
-    <button role="tab" data-tab="tb" aria-selected="false">تراز چهارستونی</button>
-    <button role="tab" data-tab="aging" aria-selected="false">سن‌بندی حساب اشخاص</button>
     <button role="tab" data-tab="sale" aria-selected="false">فاکتور فروش</button>
+    <button role="tab" data-tab="purchase" aria-selected="false">فاکتور خرید</button>
+    <button role="tab" data-tab="ret" aria-selected="false">برگشت</button>
     <button role="tab" data-tab="receipt" aria-selected="false">دریافت وجه</button>
+    <button role="tab" data-tab="payment" aria-selected="false">پرداخت وجه</button>
+    <button role="tab" data-tab="settle" aria-selected="false">تطبیق حساب شخص</button>
+    <button role="tab" data-tab="aging" aria-selected="false">سن‌بندی حساب اشخاص</button>
+    <button role="tab" data-tab="tb" aria-selected="false">تراز چهارستونی</button>
     <button role="tab" data-tab="ops" aria-selected="false">عملیات مجاز من</button>
   </nav>
   <section id="view"><p class="muted">نام کاربری را وارد کنید.</p></section>
 </main>
 <script>
+// This page holds NO accounting rule: every step is a catalogued operation of the core, called through the API.
 const $ = s => document.querySelector(s);
-const AREA = {sales:'فروش', receivables:'مطالبات', cheques:'چک', inventory:'موجودی', tax:'مؤدیان', beta:'اقساط بتا', ledger:'دفتر'};
-const TEXT_COLS = new Set(['code', 'account_code', 'control', 'operation', 'basis', 'function_signature']);
+const AREA = {sales: 'فروش', receivables: 'مطالبات', cheques: 'چک', inventory: 'موجودی', tax: 'مؤدیان', beta: 'اقساط بتا', ledger: 'دفتر'};
+const TEXT_COLS = new Set(['code', 'account_code', 'control', 'operation', 'basis', 'function_signature', 'number']);
 const DATE_COLS = new Set(['oldest_open_due', 'since', 'effective_date', 'invoice_date', 'due_date']);
-// dates are stored in the standard calendar and SHOWN in the Jalali calendar (browser Intl, no library)
-const jdate = iso => { try { return new Date(iso + 'T12:00:00').toLocaleDateString('fa-IR-u-ca-persian', {year: 'numeric', month: '2-digit', day: '2-digit'}); } catch (e) { return iso; } };
 const fmt = v => v === null || v === undefined ? '—' : (/^-?\d+(\.\d+)?$/.test(String(v)) ? Number(v).toLocaleString('fa-IR') : v);
+
+// ---- Jalali dates: stored in the standard calendar, entered and shown in Jalali. The browser's own Persian calendar is
+// the reference (no hand-written conversion): a Jalali date is found by checking candidates against Intl. ----
+const FA = '۰۱۲۳۴۵۶۷۸۹';
+const latin = s => String(s).replace(/[۰-۹]/g, d => FA.indexOf(d)).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+const jparts = d => { const p = new Intl.DateTimeFormat('en-u-ca-persian-nu-latn', {year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'UTC'}).formatToParts(d);
+                      const g = t => Number(p.find(x => x.type === t).value); return [g('year'), g('month'), g('day')]; };
+const jdate = iso => { try { const [y, m, d] = jparts(new Date(iso + 'T00:00:00Z')); return latin(`${y}/${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}`).replace(/\d/g, x => FA[x]); } catch (e) { return iso; } };
+function j2iso(text) {
+  const m = latin(text).trim().match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/); if (!m) return null;
+  const [jy, jm, jd] = m.slice(1).map(Number); if (jm < 1 || jm > 12 || jd < 1 || jd > 31) return null;
+  const guess = Date.UTC(jy + 621, 2, 20) + ((jm <= 6 ? (jm - 1) * 31 : 186 + (jm - 7) * 30) + jd - 1) * 864e5;
+  for (let k = -3; k <= 3; k++) { const d = new Date(guess + k * 864e5); const [y, mm, dd] = jparts(d);
+    if (y === jy && mm === jm && dd === jd) return d.toISOString().slice(0, 10); }
+  return null;
+}
+const todayIso = new Date().toISOString().slice(0, 10);
+const dateInput = (id) => `<label>تاریخ <input id="${id}" class="jd" value="${jdate(todayIso)}" size="10" placeholder="۱۴۰۵/۰۱/۰۱"></label>`;
+function readDate(id) { const iso = j2iso($('#' + id).value); if (!iso) throw new Error('تاریخ شمسی نامعتبر است (نمونه: ۱۴۰۵/۰۷/۰۵).'); return iso; }
+
 let user = ''; try { user = sessionStorage.getItem('almas_user') || ''; } catch (e) {}
 $('#user').value = user;
 async function api(path, body) {
@@ -52,124 +75,218 @@ async function api(path, body) {
   const j = await r.json(); if (!r.ok) throw new Error(j.detail || r.status); return j;
 }
 const op = (name, args) => api('/operations/' + name, {args}).then(j => j.rows);
+const one = rows => Object.values(rows[0])[0];
 function table(rows, cols) {
   if (!rows.length) return '<p class="zero">موردی نیست.</p>';
   return '<table><thead><tr>' + cols.map(c => `<th>${c[1]}</th>`).join('') + '</tr></thead><tbody>' +
-    rows.map(r => '<tr>' + cols.map(c => { const v = r[c[0]]; const n = /^-?\d/.test(String(v));
+    rows.map(r => '<tr>' + cols.map(c => { const v = r[c[0]];
       if (c[0] === 'area') return `<td>${AREA[v] || v}</td>`;
-      if (TEXT_COLS.has(c[0])) return `<td>${v ?? '—'}</td>`;                     // codes are not amounts
+      if (c[0] === 'severity') return `<td class="sev ${v}">${{high: 'زیاد', medium: 'متوسط', low: 'کم'}[v] || v}</td>`;
+      if (TEXT_COLS.has(c[0])) return `<td>${v ?? '—'}</td>`;
       if (DATE_COLS.has(c[0])) return `<td>${v ? jdate(String(v).slice(0, 10)) : '—'}</td>`;
-      return c[0] === 'severity' ? `<td class="sev ${v}">${{high:'زیاد',medium:'متوسط',low:'کم'}[v] || v}</td>`
-                                 : `<td class="${n ? 'num' : ''}">${fmt(v)}</td>`; }).join('') + '</tr>').join('') + '</tbody></table>';
+      if (c[2] === 'html') return `<td>${v}</td>`;
+      return `<td class="${/^-?\d/.test(String(v)) ? 'num' : ''}">${fmt(v)}</td>`; }).join('') + '</tr>').join('') + '</tbody></table>';
 }
-const today = new Date().toISOString().slice(0, 10);
+async function voucherHtml(source, ref) {
+  const rows = await op('documents.voucher', {p_source: source, p_ref: String(ref)});
+  return '<h2>سند حسابداری</h2>' + table(rows, [['account_code', 'کد'], ['account_name', 'حساب'], ['party_name', 'شخص'], ['debit', 'بدهکار'], ['credit', 'بستانکار']]);
+}
+const picked = {};
+function lookup(inputId, listId, opName, key, label, extra = {}) {
+  const inp = $('#' + inputId);
+  inp.oninput = async () => {
+    const q = inp.value.trim(); picked[inputId] = null; if (q.length < 2) return;
+    const rows = await op(opName, {p_query: q, ...extra});
+    $('#' + listId).innerHTML = rows.map(r => `<option value="${r[label]}">`).join('');
+    const hit = rows.find(r => String(r[label]) === q); picked[inputId] = hit ? hit[key] : null;
+    picked[inputId + '_row'] = hit || null;
+  };
+}
+const options = (rows, key, label) => rows.map(r => `<option value="${r[key]}">${r[label]}</option>`).join('');
+
+// ---- views ----
 const views = {
   async inbox() {
-    const rows = await op('controls.inbox', {p_as_of: today});
-    const open = rows.filter(r => Number(r.items) > 0), clear = rows.length - open.length;
+    const rows = await op('controls.inbox', {p_as_of: todayIso});
+    const open = rows.filter(r => Number(r.items) > 0), clear = rows.length - open.length, order = ['high', 'medium', 'low'];
     return `<div class="card"><p>${fmt(open.length)} کنترل نیازمند توجه · <span class="zero">${fmt(clear)} کنترل بدون مورد</span></p>` +
-      table(open.sort((a, b) => ['high','medium','low'].indexOf(a.severity) - ['high','medium','low'].indexOf(b.severity)),
-            [['area','حوزه'],['control','کد'],['severity','شدت'],['title','شرح'],['items','تعداد'],['amount','مبلغ (ریال)'],['basis','پشتوانه']]) + '</div>';
+      table(open.sort((a, b) => order.indexOf(a.severity) - order.indexOf(b.severity)),
+            [['area', 'حوزه'], ['control', 'کد'], ['severity', 'شدت'], ['title', 'شرح'], ['items', 'تعداد'], ['amount', 'مبلغ (ریال)'], ['basis', 'پشتوانه']]) + '</div>';
   },
-  async tb() {
-    const f = $('#tbf')?.value || '', t = $('#tbt')?.value || '', y = $('#tby')?.value || '';
-    let out = `<div class="card row"><label>سال مالی <input id="tby" value="${y}" size="5"></label><label>از <input id="tbf" type="date" value="${f}"></label>
-      <label>تا <input id="tbt" type="date" value="${t}"></label><button class="btn" onclick="show('tb')">نمایش</button></div>`;
-    if (!y || !f || !t) return out + '<p class="muted">سال و بازه را وارد کنید.</p>';
-    const rows = (await op('ledger.trial_balance', {p_year: y, p_from: f, p_to: t})).filter(r => r.party_id === null && r.level <= 2)
-      .sort((a, b) => a.code.localeCompare(b.code));
-    return out + '<div class="card">' + table(rows, [['code','کد'],['name','حساب'],['opening','مانده اول'],['period_debit','گردش بدهکار'],
-      ['period_credit','گردش بستانکار'],['closing_debit','مانده بدهکار'],['closing_credit','مانده بستانکار']]) + '</div>';
+  sale: () => invoiceForm('sales'),
+  purchase: () => invoiceForm('purchase'),
+  receipt: () => moneyForm('receive'),
+  payment: () => moneyForm('pay'),
+  async ret() {
+    setTimeout(wireReturn, 0);
+    return `<div class="card"><div class="row">
+      <label>نوع <select id="rkind"><option value="sales">برگشت از فروش</option><option value="purchase">برگشت از خرید</option></select></label>
+      <label>فاکتور (شماره یا نام شخص) <input id="rinv" size="24"></label><button class="btn" id="rfind">جست‌وجو</button></div>
+      <div id="rlist"></div><div id="rlines"></div><div id="rmsg"></div></div>`;
+  },
+  async settle() {
+    setTimeout(wireSettle, 0);
+    return `<div class="card"><div class="row"><label>شخص <input id="tparty" list="tplist" size="28"></label><datalist id="tplist"></datalist>
+      <button class="btn" id="tshow">نمایش</button></div><div id="tsub"></div><div id="tmsg"></div>
+      <p class="muted">تطبیق، دریافت‌ها و بستانکاری‌های باز را به ترتیب قدیمی‌ترین بدهی تخصیص می‌دهد. هر تخصیص با علت قابل برگشت است.</p></div>`;
   },
   async aging() {
-    const rows = (await op('ar.aging_report', {p_as_of: today})).slice(0, 300);
-    return '<div class="card">' + table(rows, [['party_name','شخص'],['account_code','حساب'],['not_due','سررسیدنشده'],['overdue_1_90','۱ تا ۹۰ روز گذشته'],
-      ['overdue_over_90','بیش از ۹۰ روز'],['unapplied_credit','بستانکار تخصیص‌نیافته'],['net','خالص'],['oldest_open_due','قدیمی‌ترین سررسید']]) + '</div>';
+    const rows = (await op('ar.aging_report', {p_as_of: todayIso})).slice(0, 300);
+    return '<div class="card">' + table(rows, [['party_name', 'شخص'], ['account_code', 'حساب'], ['not_due', 'سررسیدنشده'], ['overdue_1_90', '۱ تا ۹۰ روز گذشته'],
+      ['overdue_over_90', 'بیش از ۹۰ روز'], ['unapplied_credit', 'بستانکار تخصیص‌نیافته'], ['net', 'خالص'], ['oldest_open_due', 'قدیمی‌ترین سررسید']]) + '</div>';
   },
-  async sale() {
-    const [wh, cash] = await Promise.all([op('warehouses.list', {}), op('money_accounts.list', {})]);
-    setTimeout(() => wireSale(wh), 0);
-    return `<div class="card"><div class="row">
-        <label>تاریخ <input id="sdate" type="date" value="${today}"></label>
-        <label>مشتری <input id="sparty" list="plist" placeholder="نام، کد ملی یا موبایل" size="28"></label><datalist id="plist"></datalist></div>
-      <div class="row"><label>کالا <input id="sitem" list="ilist" size="24"></label><datalist id="ilist"></datalist>
-        <label>انبار <select id="swh">${wh.map(w => `<option value="${w.warehouse_id}">${w.name}</option>`).join('')}</select></label>
-        <label>تعداد <input id="sqty" type="number" min="1" value="1" style="width:80px"></label>
-        <label>قیمت واحد (ریال) <input id="sprice" type="number" min="0" style="width:140px"></label>
-        <button class="btn" id="sadd">افزودن ردیف</button></div>
-      <div id="slines"></div>
-      <div class="row"><label>دریافت نقد/کارت (ریال) <input id="spaid" type="number" min="0" value="0" style="width:140px"></label>
-        <label>به <select id="scash">${cash.map(a => `<option value="${a.account_id}">${a.name}</option>`).join('')}</select></label>
-        <button class="btn" id="ssave" style="background:var(--accent);color:#fff">ثبت نهایی فاکتور</button></div>
-      <div id="smsg"></div></div>`;
-  },
-  async receipt() {
-    const cash = await op('money_accounts.list', {});
-    setTimeout(wireReceipt, 0);
-    return `<div class="card"><div class="row">
-        <label>تاریخ <input id="rdate" type="date" value="${today}"></label>
-        <label>از شخص <input id="rparty" list="plist" size="28"></label><datalist id="plist"></datalist>
-        <label>مبلغ (ریال) <input id="ramount" type="number" min="1" style="width:160px"></label>
-        <label>به <select id="rcash">${cash.map(a => `<option value="${a.account_id}">${a.name}</option>`).join('')}</select></label>
-        <button class="btn" id="rsave" style="background:var(--accent);color:#fff">ثبت دریافت</button></div><div id="rmsg"></div></div>`;
+  async tb() {
+    const y = $('#tby')?.value || '', f = $('#tbf')?.value || '', t = $('#tbt')?.value || '';
+    let out = `<div class="card row"><label>سال مالی <input id="tby" value="${y}" size="5" placeholder="۱۴۰۵"></label>
+      <label>از <input id="tbf" value="${f}" size="10" placeholder="۱۴۰۵/۰۱/۰۱"></label><label>تا <input id="tbt" value="${t}" size="10" placeholder="۱۴۰۵/۱۲/۲۹"></label>
+      <button class="btn" onclick="show('tb')">نمایش</button></div>`;
+    if (!y || !f || !t) return out + '<p class="muted">سال و بازه را به تاریخ شمسی وارد کنید.</p>';
+    const from = j2iso(f), to = j2iso(t); if (!from || !to) return out + '<p class="err">تاریخ نامعتبر است.</p>';
+    const rows = (await op('ledger.trial_balance', {p_year: latin(y), p_from: from, p_to: to})).filter(r => r.party_id === null && r.level <= 2)
+      .sort((a, b) => a.code.localeCompare(b.code));
+    return out + '<div class="card">' + table(rows, [['code', 'کد'], ['name', 'حساب'], ['opening', 'مانده اول'], ['period_debit', 'گردش بدهکار'],
+      ['period_credit', 'گردش بستانکار'], ['closing_debit', 'مانده بدهکار'], ['closing_credit', 'مانده بستانکار']]) + '</div>';
   },
   async ops() {
     const rows = await api('/operations');
     return '<div class="card">' + table(rows.map(r => ({...r, permitted: r.permitted ? 'بله' : 'خیر', kind: r.kind === 'write' ? 'ثبت' : 'مشاهده'})),
-      [['operation','عملیات'],['kind','نوع'],['purpose','هدف'],['permitted','مجاز'],['undo','راه برگشت'],['basis','پشتوانه']]) + '</div>';
+      [['operation', 'عملیات'], ['kind', 'نوع'], ['purpose', 'هدف'], ['permitted', 'مجاز'], ['undo', 'راه برگشت'], ['basis', 'پشتوانه']]) + '</div>';
   }
 };
-// ---- forms: every step is a catalogued operation; the page holds no rule of its own ----
-const picked = {};
-function lookup(inputId, listId, opName, key, label) {
-  const inp = $('#' + inputId);
-  inp.oninput = async () => {
-    const q = inp.value.trim(); if (q.length < 2) return;
-    const rows = await op(opName, {p_query: q});
-    $('#' + listId).innerHTML = rows.map(r => `<option value="${r[label]}">`).join('');
-    const hit = rows.find(r => r[label] === q); picked[inputId] = hit ? hit[key] : null;
-  };
+
+// ---- one invoice form for sales and purchases ----
+async function invoiceForm(kind) {
+  const [wh, cash] = await Promise.all([op('warehouses.list', {}), op('money_accounts.list', {})]);
+  const sale = kind === 'sales';
+  setTimeout(() => wireInvoice(kind), 0);
+  return `<div class="card"><div class="row">${dateInput('idate')}
+      <label>${sale ? 'مشتری' : 'تأمین‌کننده'} <input id="iparty" list="iplist" placeholder="نام، کد ملی یا موبایل" size="28"></label><datalist id="iplist"></datalist>
+      ${sale ? '' : '<label>شماره فاکتور فروشنده <input id="isupno" size="12"></label><label>هزینه‌های فاکتور (حمل و …) <input id="iextra" type="number" min="0" value="0" style="width:130px"></label>'}</div>
+    <div class="row"><label>کالا <input id="iitem" list="iilist" size="24"></label><datalist id="iilist"></datalist>
+      <label>انبار <select id="iwh">${options(wh, 'warehouse_id', 'name')}</select></label>
+      <label>تعداد <input id="iqty" type="number" min="1" value="1" style="width:80px"></label>
+      <label>قیمت واحد (ریال) <input id="iprice" type="number" min="0" style="width:140px"></label>
+      <label>تخفیف ردیف <input id="idisc" type="number" min="0" value="0" style="width:110px"></label>
+      <button class="btn" id="iadd">افزودن ردیف</button></div>
+    <div id="ilines"></div>
+    <div class="row"><label>${sale ? 'دریافت همان لحظه' : 'پرداخت همان لحظه'} (ریال) <input id="ipaid" type="number" min="0" value="0" style="width:140px"></label>
+      <label>${sale ? 'به' : 'از'} <select id="icash">${options(cash, 'account_id', 'name')}</select></label>
+      <button class="btn primary" id="isave">ثبت نهایی فاکتور</button></div>
+    <div id="imsg"></div></div>`;
 }
-function wireSale() {
-  const lines = [];
-  lookup('sparty', 'plist', 'parties.find', 'party_id', 'name'); lookup('sitem', 'ilist', 'items.find', 'item_id', 'name');
-  const draw = () => $('#slines').innerHTML = lines.length ? table(lines.map((l, i) => ({...l, n: i + 1, total: l.quantity * l.unit_price})),
-      [['n','ردیف'],['name','کالا'],['quantity','تعداد'],['unit_price','قیمت واحد'],['total','جمع']]) : '';
-  $('#sadd').onclick = () => {
-    if (!picked.sitem) return $('#smsg').innerHTML = '<p class="err">کالا را از فهرست انتخاب کنید.</p>';
-    lines.push({item_id: picked.sitem, name: $('#sitem').value, warehouse_id: Number($('#swh').value),
-                quantity: Number($('#sqty').value), unit_price: Number($('#sprice').value)}); draw();
+function wireInvoice(kind) {
+  const lines = [], sale = kind === 'sales';
+  lookup('iparty', 'iplist', 'parties.find', 'party_id', 'name'); lookup('iitem', 'iilist', 'items.find', 'item_id', 'name');
+  const draw = () => $('#ilines').innerHTML = lines.length ? table(lines.map((l, i) => ({...l, n: i + 1, total: l.quantity * l.unit_price - l.discount,
+      del: `<button class="btn" onclick="this.closest('tr').dataset.x=1;window._del(${i})">حذف</button>`})),
+      [['n', 'ردیف'], ['name', 'کالا'], ['wh', 'انبار'], ['quantity', 'تعداد'], ['unit_price', 'قیمت واحد'], ['discount', 'تخفیف'], ['total', 'جمع'], ['del', '', 'html']]) : '';
+  window._del = i => { lines.splice(i, 1); draw(); };
+  $('#iadd').onclick = () => {
+    if (!picked.iitem) return $('#imsg').innerHTML = '<p class="err">کالا را از فهرست انتخاب کنید.</p>';
+    lines.push({item_id: picked.iitem, name: $('#iitem').value, warehouse_id: Number($('#iwh').value), wh: $('#iwh').selectedOptions[0].text,
+                quantity: Number($('#iqty').value), unit_price: Number($('#iprice').value), discount: Number($('#idisc').value)});
+    $('#imsg').innerHTML = ''; draw();
   };
-  $('#ssave').onclick = async () => {
-    const msg = $('#smsg');
-    if (!picked.sparty || !lines.length) return msg.innerHTML = '<p class="err">مشتری و دست‌کم یک ردیف لازم است.</p>';
+  $('#isave').onclick = async () => {
+    const msg = $('#imsg');
     try {
-      const paid = Number($('#spaid').value);
-      const pay = paid > 0 ? [{method: 'cash', account_id: Number($('#scash').value), amount: paid}] : [];
-      const id = Object.values((await op('sales.create', {p_date: $('#sdate').value, p_party: picked.sparty,
-                   p_lines: lines.map(({item_id, warehouse_id, quantity, unit_price}) => ({item_id, warehouse_id, quantity, unit_price})), p_payments: pay}))[0])[0];
-      try { await op('sales.finalize', {p_invoice: id}); }
-      catch (e) {
-        if (!/below/.test(e.message)) throw e;
-        const reason = prompt('فروش زیر قیمت خرید است. در صورت تأیید، علت را بنویسید:');
-        if (!reason) throw new Error('فاکتور به‌صورت پیش‌نویس ماند (فروش زیر قیمت خرید تأیید نشد).');
-        await op('sales.finalize', {p_invoice: id, p_acknowledge_below_cost: true, p_below_cost_reason: reason});
+      if (!picked.iparty || !lines.length) throw new Error((sale ? 'مشتری' : 'تأمین‌کننده') + ' و دست‌کم یک ردیف لازم است.');
+      const date = readDate('idate'), paid = Number($('#ipaid').value);
+      const pay = paid > 0 ? [{method: 'cash', account_id: Number($('#icash').value), amount: paid}] : [];
+      const body = lines.map(({item_id, warehouse_id, quantity, unit_price, discount}) => ({item_id, warehouse_id, quantity, unit_price, discount}));
+      let id;
+      if (sale) {
+        id = one(await op('sales.create', {p_date: date, p_party: picked.iparty, p_lines: body, p_payments: pay}));
+        try { await op('sales.finalize', {p_invoice: id}); }
+        catch (e) {
+          if (!/below/.test(e.message)) throw e;
+          const reason = prompt('فروش زیر قیمت خرید است. در صورت تأیید، علت را بنویسید:');
+          if (!reason) throw new Error('فاکتور به‌صورت پیش‌نویس ماند (فروش زیر قیمت خرید تأیید نشد).');
+          await op('sales.finalize', {p_invoice: id, p_acknowledge_below_cost: true, p_below_cost_reason: reason});
+        }
+      } else {
+        id = one(await op('purchase.create', {p_date: date, p_party: picked.iparty, p_lines: body, p_payments: pay,
+                                              p_supplier_invoice_no: $('#isupno').value || null, p_extra_cost: Number($('#iextra').value)}));
+        await op('purchase.finalize', {p_invoice: id});
       }
-      msg.innerHTML = `<p class="zero">فاکتور ${fmt(id)} ثبت نهایی شد (سند حسابداری و خروج کالا).</p>`; lines.length = 0; draw();
+      msg.innerHTML = `<p class="zero">فاکتور ثبت نهایی شد (سند حسابداری و ${sale ? 'خروج' : 'ورود'} کالا).</p>` +
+                      await voucherHtml(sale ? 'sales_invoice' : 'purchase_invoice', id);
+      lines.length = 0; draw();
     } catch (e) { msg.innerHTML = `<p class="err">${e.message}</p>`; }
   };
 }
-function wireReceipt() {
-  lookup('rparty', 'plist', 'parties.find', 'party_id', 'name');
-  $('#rsave').onclick = async () => {
-    const msg = $('#rmsg');
-    if (!picked.rparty) return msg.innerHTML = '<p class="err">شخص را از فهرست انتخاب کنید.</p>';
-    try {
-      await op('treasury.receive', {p_party: picked.rparty, p_money_account: Number($('#rcash').value), p_amount: Number($('#ramount').value), p_date: $('#rdate').value});
-      msg.innerHTML = '<p class="zero">دریافت ثبت شد.</p>';
-    } catch (e) { msg.innerHTML = `<p class="err">${e.message}</p>`; }
+
+// ---- one money form for receipts and payments ----
+async function moneyForm(kind) {
+  const cash = await op('money_accounts.list', {});
+  setTimeout(() => {
+    lookup('mparty', 'mplist', 'parties.find', 'party_id', 'name');
+    $('#msave').onclick = async () => {
+      const msg = $('#mmsg');
+      try {
+        if (!picked.mparty) throw new Error('شخص را از فهرست انتخاب کنید.');
+        const entry = one(await op(kind === 'receive' ? 'treasury.receive' : 'treasury.pay', {p_party: picked.mparty, p_money_account: Number($('#mcash').value),
+                                   p_amount: Number($('#mamount').value), p_date: readDate('mdate'), p_description: $('#mdesc').value || null}));
+        msg.innerHTML = `<p class="zero">${kind === 'receive' ? 'دریافت' : 'پرداخت'} ثبت شد (سند ${fmt(entry)}).</p>`;
+      } catch (e) { msg.innerHTML = `<p class="err">${e.message}</p>`; }
+    };
+  }, 0);
+  return `<div class="card"><div class="row">${dateInput('mdate')}
+      <label>${kind === 'receive' ? 'از' : 'به'} شخص <input id="mparty" list="mplist" size="28"></label><datalist id="mplist"></datalist>
+      <label>مبلغ (ریال) <input id="mamount" type="number" min="1" style="width:160px"></label>
+      <label>${kind === 'receive' ? 'به' : 'از'} <select id="mcash">${options(cash, 'account_id', 'name')}</select></label>
+      <label>شرح <input id="mdesc" size="24"></label>
+      <button class="btn primary" id="msave">ثبت</button></div><div id="mmsg"></div></div>`;
+}
+
+// ---- returns ----
+function wireReturn() {
+  $('#rfind').onclick = async () => {
+    const kind = $('#rkind').value;
+    const rows = await op('invoices.find', {p_kind: kind, p_query: latin($('#rinv').value.trim())});
+    $('#rlist').innerHTML = table(rows.map(r => ({...r, pick: `<button class="btn" onclick="window._pick('${kind}', ${r.invoice_id})">انتخاب</button>`})),
+      [['number', 'شماره'], ['invoice_date', 'تاریخ'], ['party_name', 'شخص'], ['total', 'مبلغ'], ['pick', '', 'html']]);
+  };
+  window._pick = async (kind, invoice) => {
+    const rows = await op('invoices.returnable', {p_kind: kind, p_invoice: invoice});
+    $('#rlines').innerHTML = `<h2>ردیف‌های قابل برگشت</h2>` + table(rows.map(r => ({...r,
+        q: `<input type="number" min="0" max="${r.returnable}" value="0" data-line="${r.line_no}" style="width:80px">`})),
+      [['line_no', 'ردیف'], ['item_name', 'کالا'], ['quantity', 'تعداد فاکتور'], ['returnable', 'قابل برگشت'], ['net_unit_price', 'قیمت واحد'], ['q', 'تعداد برگشتی', 'html']]) +
+      `<div class="row">${dateInput('rdate')}<label>علت <input id="rreason" size="30"></label><button class="btn primary" id="rsave">ثبت نهایی برگشت</button></div>`;
+    $('#rsave').onclick = async () => {
+      const msg = $('#rmsg');
+      try {
+        const lines = [...document.querySelectorAll('#rlines input[data-line]')].map(i => ({original_line_no: Number(i.dataset.line), quantity: Number(i.value)}))
+                      .filter(l => l.quantity > 0);
+        if (!lines.length) throw new Error('دست‌کم یک ردیف با تعداد برگشتی لازم است.');
+        const id = one(await op('return.create', {p_kind: kind === 'sales' ? 'sales_return' : 'purchase_return', p_invoice: invoice,
+                                                  p_date: readDate('rdate'), p_reason: $('#rreason').value, p_lines: lines}));
+        await op('return.finalize', {p_return: id});
+        msg.innerHTML = '<p class="zero">برگشت ثبت نهایی شد.</p>' + await voucherHtml('return', id);
+        window._pick(kind, invoice);
+      } catch (e) { msg.innerHTML = `<p class="err">${e.message}</p>`; }
+    };
   };
 }
+
+// ---- settlement (matching receipts to invoices) ----
+function wireSettle() {
+  lookup('tparty', 'tplist', 'parties.find', 'party_id', 'name');
+  const showSub = async () => {
+    if (!picked.tparty) return $('#tmsg').innerHTML = '<p class="err">شخص را از فهرست انتخاب کنید.</p>';
+    const rows = await op('ar.party_subledgers', {p_party: picked.tparty});
+    $('#tsub').innerHTML = table(rows.map(r => ({...r, act: (Number(r.open_debit) > 0 && Number(r.open_credit) > 0)
+        ? `<button class="btn" onclick="window._fifo(${r.account_id})">تطبیق خودکار</button>` : '—'})),
+      [['account_code', 'حساب'], ['account_name', 'نام حساب'], ['balance', 'مانده'], ['open_debit', 'بدهی باز'], ['open_credit', 'بستانکار باز'], ['act', '', 'html']]);
+  };
+  $('#tshow').onclick = showSub;
+  window._fifo = async account => {
+    try { const n = one(await op('ar.allocate_fifo', {p_account: account, p_party: picked.tparty}));
+          $('#tmsg').innerHTML = `<p class="zero">${fmt(n)} تخصیص ثبت شد.</p>`; showSub(); }
+    catch (e) { $('#tmsg').innerHTML = `<p class="err">${e.message}</p>`; }
+  };
+}
+
 let current = 'inbox';
 async function show(tab) {
   current = tab;
@@ -179,11 +296,6 @@ async function show(tab) {
   try { $('#view').innerHTML = await views[tab](); } catch (e) { $('#view').innerHTML = `<p class="err">${e.message}</p>`; }
 }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.tab));
-// every date input shows its Jalali date next to it
-new MutationObserver(() => document.querySelectorAll('input[type=date]:not([data-j])').forEach(i => {
-  i.dataset.j = 1; const h = document.createElement('span'); h.className = 'muted'; h.style.marginInlineStart = '6px';
-  const upd = () => h.textContent = i.value ? jdate(i.value) : ''; i.addEventListener('change', upd); i.after(h); upd();
-})).observe(document.body, {childList: true, subtree: true});
 $('#login').onclick = () => { user = $('#user').value.trim(); try { sessionStorage.setItem('almas_user', user); } catch (e) {} show(current); };
 show(current);
 </script>
