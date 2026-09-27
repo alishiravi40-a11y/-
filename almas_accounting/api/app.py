@@ -83,6 +83,8 @@ def operations(user: str = Depends(authenticate)):
 @app.get("/schema")
 def schema(user: str = Depends(authenticate)):
     with psycopg.connect(dsn()) as c:
+        if c.execute("SELECT EXISTS (SELECT 1 FROM core.sales_agent_user WHERE username = %s)", (user,)).fetchone()[0]:
+            raise HTTPException(403, "the agent workspace has no access to the central schema")
         return _rows(c.execute("SELECT * FROM core.schema_catalog ORDER BY object_kind, name"))
 
 
@@ -99,6 +101,10 @@ def call(operation: str, body: Call, user: str = Depends(authenticate)):
         if not op:
             raise HTTPException(404, f"unknown operation {operation}")
         kind, sig = op
+        try:                                            # agent users: agent-scoped operations only (core 021)
+            c.execute("SELECT core.require_operation(%s, %s)", (user, operation))
+        except psycopg.errors.InsufficientPrivilege as e:
+            raise HTTPException(403, str(e).split("\n")[0])
         names = c.execute("""SELECT p.proargnames, p.pronargs, p.proretset, pg_get_function_identity_arguments(p.oid)
                              FROM pg_proc p WHERE p.oid = to_regprocedure(%s)""", (sig,)).fetchone()
         argnames = [n for n in (names[0] or [])][: names[1]]

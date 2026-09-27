@@ -79,3 +79,16 @@ def test_ui_is_served_and_the_inbox_is_an_operation(client):
     assert page.status_code == 200 and 'dir="rtl"' in page.text and "controls.inbox" in page.text
     rows = c.post("/operations/controls.inbox", json={"args": {"p_as_of": "2026-08-01"}}, headers=h("viewer")).json()["rows"]
     assert {r["area"] for r in rows} >= {"receivables", "tax", "cheques"}
+
+
+def test_agent_workspace_user_reaches_only_agent_operations(client, db):
+    c, ids, p = client
+    a = db.execute("INSERT INTO core.sales_agent (code, title, created_by) VALUES ('A1', 'agent one', 'install') RETURNING id").fetchone()[0]
+    db.execute("INSERT INTO core.app_user (username) VALUES ('rep')")
+    db.execute("INSERT INTO core.sales_agent_user (username, agent_id, bound_by) VALUES ('rep', %s, 'install')", (a,))
+    db.execute("INSERT INTO core.user_permission (username, permission, granted_by) VALUES ('rep', 'agent.workspace', 'install')")
+    r = c.post("/operations/ar.aging", json={"args": {"p_as_of": "2026-06-01"}}, headers=h("rep"))
+    assert r.status_code == 403 and "agent workspace" in r.json()["detail"]                 # central accounting is closed
+    assert c.post("/operations/agent.my_cases", json={"args": {}}, headers=h("rep")).status_code == 200
+    assert c.get("/schema", headers=h("rep")).status_code == 403
+    assert all(o["operation"].startswith("agent.") for o in c.get("/operations", headers=h("rep")).json())
