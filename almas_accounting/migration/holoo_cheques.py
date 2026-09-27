@@ -214,7 +214,8 @@ def migrate(conn, db: str, user: str = "holoo-migration") -> dict:
         stats["closed_before_migration"] = conn.execute("""
             UPDATE core.cheque k SET closed_before_migration = x.st FROM (
               SELECT e.check_code, CASE WHEN c.direction = 'out' THEN 'paid_by_bank'
-                                        WHEN coalesce(max(e.account_code), '') IN ('', '00000') THEN 'collected' ELSE 'endorsed_to_party' END st
+                                        -- Holoo RetVazeatCheck: V with an empty counterparty = collected, any other (even «00000») = spent
+                                        WHEN coalesce(max(e.account_code), '') = '' THEN 'collected' ELSE 'endorsed_to_party' END st
               FROM holoo_mirror.cheque_event e JOIN holoo_mirror.cheque c ON c.source_db = e.source_db AND c.check_code = e.check_code
               JOIN holoo_mirror.voucher v ON v.source_db = e.source_db AND v.sanad_code = e.voucher_code
               WHERE e.source_db = %s AND e.removed_run IS NULL GROUP BY e.check_code, c.direction

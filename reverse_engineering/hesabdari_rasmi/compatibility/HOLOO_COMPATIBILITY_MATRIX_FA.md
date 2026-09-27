@@ -21,10 +21,10 @@
 
 | وضعیت آینده | تعداد |
 |---|---:|
-| VERIFIED | 33 |
+| VERIFIED | 35 |
 | TODO | 23 |
-| READER_READY | 22 |
-| IMPLEMENTED | 12 |
+| READER_READY | 19 |
+| IMPLEMENTED | 13 |
 | DESIGNED | 5 |
 
 ## حسابداری
@@ -71,7 +71,7 @@
 
 | ID | قابلیت | منبع داده هلو | اثبات | کاربرد ۱۴۰۴ | نیاز | دسته | آزمون برابری | وضعیت |
 |---|---|---|---|---|---|---|---|---|
-| SAL-01 | فاکتور فروش (سرفصل + ردیف) | `FACTURE/FACTART Fac_Type=F` | PROVEN | 19,877 | MUST | A | C-09؛ جمع هر فاکتور، ردیف‌ها، روش تسویه برابر | READER_READY |
+| SAL-01 | فاکتور فروش (سرفصل + ردیف) | `FACTURE/FACTART Fac_Type=F` | PROVEN | 19,877 | MUST | A | فاکتور فروش هسته: پیش‌نویس ← قطعی ← ثبت یک‌تراکنشی سند + خروج موجودی؛ فروش با موجودی ناکافی رد (015) | IMPLEMENTED |
 | SAL-02 | روش‌های تسویه فاکتور (نقد/کارت/چک/نسیه) | `FNaghd/Card/FCheck/FNesieh` | PROVEN | همه | MUST | B | مجموع هر روش در سال برابر | READER_READY |
 | SAL-03 | سند خودکار فروش با ردیف‌های دریافت همان لحظه | `Sanad_Type 13` | PROVEN | همه | MUST | B | قاعده ثبت core.document_posting_lines: ۱۹,۸۷۷/۱۹,۸۷۷ سند فروش عیناً برابر سند هلو (migration/posting_parity.py) | VERIFIED |
 | SAL-04 | ثبت فروش از وب‌سرویس + شماره سفارش در شرح | `Process (وب سرویس)، Fac_Comment «…/شماره»، UserCode=3` | PROVEN | 20,083 | MUST | B | شماره سفارش استخراج و یکتا؛ تطبیق با سامانه فروش | READER_READY |
@@ -157,8 +157,8 @@
 
 | ID | قابلیت | منبع داده هلو | اثبات | کاربرد ۱۴۰۴ | نیاز | دسته | آزمون برابری | وضعیت |
 |---|---|---|---|---|---|---|---|---|
-| TAX-01 | ارسال به سامانه مؤدیان و وضعیت | `FACTURE.StateTax/FTaxId/UId/SerialFact, TaxLog` | PROVEN | 20,608 ارسال | MUST | B | وضعیت هر فاکتور برابر؛ تطبیق دفاتر↔مؤدیان | READER_READY |
-| TAX-02 | ابطال در مؤدیان | `TaxLog SendType 3` | PROVEN | 4 | MUST | B | هم‌زمان با سند معکوس | READER_READY |
+| TAX-01 | ارسال به سامانه مؤدیان و وضعیت | `FACTURE.StateTax/FTaxId/UId/SerialFact, TaxLog` | PROVEN | 20,608 ارسال | MUST | B | سابقه ارسال ۲۰,۶۰۸ تلاش منتقل شد (014)؛ وضعیت ۱۹,۸۱۱ فاکتور = StateTax هلو؛ ۶۰ مغایرت پرچم/سابقه خود هلو (W-39، T-06)؛ کنترل‌های T-01..T-06 (E25) | VERIFIED |
+| TAX-02 | ابطال در مؤدیان | `TaxLog SendType 3` | PROVEN | 4 | MUST | B | ابطال = SendType 3 (اثبات‌شده)؛ ابطال/اصلاحیه فقط با اصل پذیرفته‌شده؛ ۴ فاکتور ابطالی برابر (E25) | VERIFIED |
 | TAX-03 | مالیات بر ارزش افزوده روی فاکتور | `Sum_Levy/Sum_Scot/Levy/Scot؛ MSETUP2 VAT/Darsad_Maliat/Darsad_Avarez` | PROVEN | صفر | MUST | A | D-01: رفتار هلو حفظ می‌شود (vat_mode=holoo_compatible؛ مقدار منبع ذخیره، بدون محاسبه حدسی)؛ core test_d01_* | IMPLEMENTED |
 
 ## سوابق

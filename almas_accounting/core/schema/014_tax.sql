@@ -52,7 +52,14 @@ BEGIN
 END $$;
 CREATE TRIGGER tax_submission_rules BEFORE INSERT ON core.tax_submission FOR EACH ROW EXECUTE FUNCTION core.trg_tax_submission_rules();
 
--- the tax status of every submitted invoice: the latest attempt decides, like Holoo's StateTax
+-- Holoo's own per-invoice flag (FACTURE.StateTax), kept to expose where it disagrees with its own log (control T-06)
+CREATE TABLE core.legacy_tax_flag (
+  document_source text NOT NULL, document_ref text NOT NULL, holoo_state int, PRIMARY KEY (document_source, document_ref));
+
+-- the tax status of every submitted invoice: the latest attempt decides, except that a NOT-accepted attempt of an
+-- unproven Holoo type (legacy_unknown) never decides. Evidence (E25): in 17 invoices a SendType 6 attempt (state 0, no
+-- tax id) follows an accepted original and Holoo's own StateTax stays 2; in 9 invoices whose only attempts are of type
+-- 2 or 5 and accepted, StateTax is 2.
 CREATE VIEW core.tax_document_status AS
 SELECT DISTINCT ON (s.document_source, s.document_ref) s.document_source, s.document_ref, s.subject AS last_subject, s.status AS last_status,
        s.tax_id AS last_tax_id, s.sent_at AS last_sent_at,
@@ -60,6 +67,7 @@ SELECT DISTINCT ON (s.document_source, s.document_ref) s.document_source, s.docu
        EXISTS (SELECT 1 FROM core.tax_submission x WHERE (x.document_source, x.document_ref) = (s.document_source, s.document_ref)
                AND x.status = 'accepted' AND x.subject = 'cancellation') AS cancelled
 FROM core.tax_submission s
+WHERE s.subject <> 'legacy_unknown' OR s.status = 'accepted'
 ORDER BY s.document_source, s.document_ref, s.sent_at DESC NULLS LAST, s.id DESC;
 
 -- controls (W-08): every row is something a person must look at
@@ -82,7 +90,11 @@ RETURNS TABLE (control text, severity text, documents bigint, detail text) LANGU
   FROM core.tax_document_status WHERE attempts > 1
   UNION ALL
   SELECT 'T-05', 'low', count(*), 'legacy submissions with an unproven Holoo send type (kept raw, NEEDS_MORE_EVIDENCE)'
-  FROM core.tax_submission WHERE subject = 'legacy_unknown' $$;
+  FROM core.tax_submission WHERE subject = 'legacy_unknown'
+  UNION ALL
+  SELECT 'T-06', 'high', count(*), 'Holoo invoice flag disagrees with its own submission log — verify in the Moadian portal'
+  FROM core.legacy_tax_flag f JOIN core.tax_document_status t USING (document_source, document_ref)
+  WHERE (f.holoo_state = 2) <> (t.last_status = 'accepted') $$;
 
 INSERT INTO core.operation_catalog VALUES
   ('tax.controls', 'read', 'core.tax_controls(date)', 'Moadian controls: unsent, failed, duplicate tax ids, resends', NULL, 'none', '—', 'E09, W-08', true);

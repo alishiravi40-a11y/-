@@ -47,9 +47,13 @@ def test_controls_and_legacy_history(tax):
     db = tax
     sub(db, "1", "original", "accepted", "TAX-A", legacy=True, send_type=1)
     sub(db, "2", "original", "accepted", "TAX-A", legacy=True, send_type=1)      # Holoo allowed this (E09.6)
-    sub(db, "3", "legacy_unknown", "failed", "TAX-X", legacy=True, send_type=5)
+    sub(db, "3", "original", "failed", "TAX-X", legacy=True, send_type=1)
     sub(db, "3", "legacy_unknown", "failed", "TAX-Y", legacy=True, send_type=5)
+    sub(db, "1", "legacy_unknown", "failed", None, legacy=True, send_type=6)       # unproven type does not decide (E25)
+    db.execute("INSERT INTO core.legacy_tax_flag VALUES ('sales_invoice', '1', 0), ('sales_invoice', '2', 2)")
+    st = dict(db.execute("SELECT document_ref, last_status FROM core.tax_document_status").fetchall())
+    assert st == {"1": "accepted", "2": "accepted", "3": "failed"}
     c = {r[0]: r[2] for r in db.execute("SELECT * FROM core.tax_controls(current_date)")}
-    assert c["T-02"] == 1 and c["T-03"] == 1 and c["T-04"] == 1 and c["T-05"] == 2
+    assert c["T-02"] == 1 and c["T-03"] == 1 and c["T-04"] == 2 and c["T-05"] == 2 and c["T-06"] == 1
     with pytest.raises(psycopg.errors.CheckViolation):
         sub(db, "5", "legacy_unknown", "sent")                           # unknown subject only for history

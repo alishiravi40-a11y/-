@@ -80,12 +80,18 @@ def test_post_document_is_balanced_idempotent_and_needs_open_period(db, ledger):
 def test_new_system_sales_invoice_posts_from_its_own_data(db, ledger):
     ids, p = ledger
     db.execute("INSERT INTO core.app_user (username) VALUES ('seller')")
+    db.execute("INSERT INTO core.user_permission (username, permission, granted_by) VALUES ('seller', 'document.post', 't')")
+    wh = db.execute("INSERT INTO core.warehouse (code, name) VALUES ('W1', 'central') RETURNING id").fetchone()[0]
     item = db.execute("INSERT INTO core.item (code, name) VALUES ('P1', 'phone') RETURNING id").fetchone()[0]
-    ship = db.execute("INSERT INTO core.item (code, name, revenue_account_id) VALUES ('0101003', 'shipping', %s) RETURNING id", (ids["7020005"],)).fetchone()[0]
+    ship = db.execute("INSERT INTO core.item (code, name, revenue_account_id, is_service) VALUES ('0101003', 'shipping', %s, true) RETURNING id",
+                      (ids["7020005"],)).fetchone()[0]
+    db.execute("INSERT INTO core.stock_movement (item_id, warehouse_id, kind, effective_date, qty, unit_price, source, created_by) "
+               "VALUES (%s, %s, 'opening', '2026-03-21', 3, 800, 'test', 't')", (item, wh))
     inv = db.execute("INSERT INTO core.sales_invoice (fiscal_year_id, invoice_date, party_id, created_by) VALUES (1, '2026-04-01', %s, 'seller') RETURNING id",
                      (p,)).fetchone()[0]
     db.execute("""INSERT INTO core.sales_invoice_line (invoice_id, line_no, item_id, quantity, unit_price, unit_cost_moving_average, unit_cost_last_purchase)
                   VALUES (%s, 1, %s, 1, 1000, 800, 800), (%s, 2, %s, 1, 50, NULL, NULL)""", (inv, item, inv, ship))
+    db.execute("UPDATE core.sales_invoice_line SET warehouse_id = %s WHERE invoice_id = %s AND line_no = 1", (wh, inv))
     db.execute("INSERT INTO core.sales_invoice_payment VALUES (%s, 1, 'card', %s, 400, 'POS-1')", (inv, ids["10200020063"]))
     with pytest.raises(psycopg.errors.RaiseException, match="not final"):
         db.execute("SELECT core.post_sales_invoice(%s, 'seller')", (inv,))
@@ -96,3 +102,5 @@ def test_new_system_sales_invoice_posts_from_its_own_data(db, ledger):
     assert bal == {"1030008": 650, "9010001": -1000, "7020005": -50, "10200020063": 400}     # shipping to its own account, no COGS (D-02)
     with pytest.raises(psycopg.errors.RaiseException, match="immutable"):
         db.execute("INSERT INTO core.sales_invoice_payment VALUES (%s, 2, 'cash', %s, 1, NULL)", (inv, ids["1010001"]))
+    # the phone left the warehouse; the service did not create stock (W-38)
+    assert db.execute("SELECT qty FROM core.inventory_valuation('2026-12-31')").fetchall() == [(2,)]

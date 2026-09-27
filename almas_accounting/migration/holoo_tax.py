@@ -3,7 +3,8 @@
 Mapping — only what is proven: SendType 1 → original, 3 → cancellation (E01.9); 2, 4, 5, 6 → legacy_unknown (raw value
 kept). State 2 → accepted, 1 → pending, 0 → failed (Holoo: «not sent / failed»). Every row keeps its Holoo id, type and
 state. Idempotent by (document, legacy id).
-Parity: the latest attempt of each invoice must give the same status as the invoice's own StateTax.
+Parity: the latest attempt of a proven kind must give the same status as the invoice's own StateTax; where Holoo's flag
+and its own log disagree, core control T-06 lists the invoice (the Moadian portal decides, not a guess).
 """
 from __future__ import annotations
 
@@ -23,7 +24,10 @@ def migrate(conn, db: str) -> dict:
                NULLIF(tax_id, ''), serial, sent_at, send_type, state, id, true, 'holoo-migration'
         FROM holoo_mirror.tax_submission WHERE source_db = %(db)s AND removed_run IS NULL
         ON CONFLICT DO NOTHING""", {"db": db, "subj": json.dumps(SUBJECT), "stat": json.dumps(STATUS)}).rowcount
-    return {"submissions": n}
+    f = conn.execute("""INSERT INTO core.legacy_tax_flag (document_source, document_ref, holoo_state)
+        SELECT 'holoo:' || source_db || ':' || fac_type, fac_code, tax_state FROM holoo_mirror.document
+        WHERE source_db = %s AND removed_run IS NULL AND tax_state IS NOT NULL ON CONFLICT DO NOTHING""", (db,)).rowcount
+    return {"submissions": n, "invoice_flags": f}
 
 
 def parity(conn, db: str) -> dict:
