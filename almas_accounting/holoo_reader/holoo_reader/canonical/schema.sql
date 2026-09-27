@@ -47,7 +47,11 @@ CREATE TABLE voucher_link (sanad_code INTEGER, fac_type VARCHAR, fac_code VARCHA
 CREATE TABLE cashbox (id INTEGER PRIMARY KEY, parent_id INTEGER, is_cash BOOLEAN, name VARCHAR, account_code VARCHAR, cheque_account_code VARCHAR, source_row_hash VARCHAR);
 
 CREATE TABLE bank_account (id INTEGER PRIMARY KEY, c_code VARCHAR, bank_code VARCHAR, account_no VARCHAR, branch VARCHAR, account_code VARCHAR,
-  is_pos BOOLEAN, is_active BOOLEAN, source_row_hash VARCHAR);
+  is_pos BOOLEAN, is_active BOOLEAN,
+  collection_account_code VARCHAR,       -- ACOUND_N.Dar_*: received cheques deposited for collection at this bank (v0.3, E18)
+  payable_cheque_account_code VARCHAR,   -- ACOUND_N.Par_*: notes payable for cheques issued on this account
+  fee_account_code VARCHAR,              -- ACOUND_N.Wage_*: bank fee expense
+  source_row_hash VARCHAR);
 
 CREATE TABLE bank (code VARCHAR PRIMARY KEY, name VARCHAR, source_row_hash VARCHAR);
 

@@ -62,24 +62,24 @@ INV-10,انبار,گزارش وضعیت انبار / موجودی به تفکی�
 INV-11,کالا,کد جایگزین/بارکد، شناسه مالیاتی کالا,"A_Code_C, ArticleCodes, A_codeIdTax","9,604 / 2,517",PROVEN,فعال,MUST,A,برابر,TODO
 INV-12,کالا,حداقل/حداکثر، محل نگهداری، تصویر، سریال، انقضا,"A_Min/A_Max, Place, Picture, ANB_SER, EXPDate",0,PROVEN,استفاده نشده,OPTIONAL,D,—,TODO
 INV-13,کالا,موجودی اول دوره منفی از سال قبل,ARTICLE.First_exist<0,12 کالا,PROVEN,12,MUST,C,Import باید هشدار دهد؛ سیستم جدید اجازه ندهد,READER_READY
-TRE-01,خزانه,صندوق‌ها و تنخواه (درختی) با حساب چک صندوق,"Cash(Sarfasl_Code, Sarfasl_Code2)",8,PROVEN,5 صندوق,MUST,A,مانده صندوق‌ها برابر,READER_READY
-TRE-02,خزانه,حساب‌های بانکی، POS، درگاه، شبا، کارمزد,"ACOUND_N, NEWBANK",98 حساب,PROVEN,فعال,MUST,B,همه حساب‌ها و مانده‌ها برابر,READER_READY
-TRE-03,خزانه,دریافت (کارت/نقد/چک) و رسید,"سند 4/8/20, SaveResid","16,161 رسید",PROVEN,فعال,MUST,B,برابر,DESIGNED
-TRE-04,خزانه,پرداخت,سند 5,289,PROVEN,فعال,MUST,A,برابر,DESIGNED
-TRE-05,خزانه,انتقال بین بانک‌ها / واریز POS,سند 1,"4,734",PROVEN,فعال,MUST,A,برابر,DESIGNED
-TRE-06,خزانه,کارمزد بانکی,سند 7/20 → 6010009,7.75 میلیارد,PROVEN,فعال,MUST,A,برابر,DESIGNED
+TRE-01,خزانه,صندوق‌ها و تنخواه (درختی) با حساب چک صندوق,"Cash(Sarfasl_Code, Sarfasl_Code2)",8,PROVEN,5 صندوق,MUST,A,۸ صندوق در core.cashbox با حساب نقد و حساب چک صندوق (Sarfasl_Code2)؛ مقصد چک دریافتی در برابری E18,VERIFIED
+TRE-02,خزانه,حساب‌های بانکی، POS، درگاه، شبا، کارمزد,"ACOUND_N, NEWBANK",98 حساب,PROVEN,فعال,MUST,B,۹۸ حساب بانکی با حساب وصولی (Dar_*)، اسناد پرداختنی (Par_*) و کارمزد (Wage_*) — Reader v0.3؛ ۳۰۲ کارمزد همه روی حساب کارمزد تعریف‌شده همان بانک,VERIFIED
+TRE-03,خزانه,دریافت (کارت/نقد/چک) و رسید,"سند 4/8/20, SaveResid","16,161 رسید",PROVEN,فعال,MUST,B,"قاعده core.treasury_posting_lines (دریافت + کارمزد + تخفیف نقدی): ۲,۲۵۰ سند دریافت هلو عیناً برابر (E19)",VERIFIED
+TRE-04,خزانه,پرداخت,سند 5,289,PROVEN,فعال,MUST,A,۲۷۲ سند پرداخت عیناً برابر، از جمله پرداخت با تخفیف نقدی خرید (E19),VERIFIED
+TRE-05,خزانه,انتقال بین بانک‌ها / واریز POS,سند 1,"4,734",PROVEN,فعال,MUST,A,"۴,۷۳۴ سند انتقال عیناً برابر؛ انتقال چندمبدأ به چند سند انتقال تفکیک می‌شود (E19)",VERIFIED
+TRE-06,خزانه,کارمزد بانکی,سند 7/20 → 6010009,7.75 میلیارد,PROVEN,فعال,MUST,A,۲۱۰ سند کارمزد + کارمزد داخل انتقال‌ها عیناً برابر؛ ۱۸ سند نوع ۷ که کارمزد نیستند (W-33) با نوع درست ثبت می‌شوند,VERIFIED
 TRE-07,خزانه,تسویه فاکتور نسیه (تخصیص دریافت به فاکتور),— (وجود ندارد),فقط متن شرح,PROVEN,ندارد,MUST,C,قابلیت جدید: تخصیص FIFO/دستی + سن‌بندی,DESIGNED
 TRE-08,خزانه,ریز عملکرد بانک,گزارش هلو,4 اجرا,PROVEN,فعال,MUST,A,برابر,TODO
 TRE-09,خزانه,اقساط,GHEST,22,PROVEN,کم,OPTIONAL,D,—,TODO
 CHQ-01,چک,چک دریافتی/پرداختی با بانک، شعبه، شماره، صیاد، صاحب,"Check, Check_Bkup","12,515",PROVEN,فعال,MUST,B,همه چک‌ها و مبالغ برابر,VERIFIED
-CHQ-02,چک,"تاریخچه وضعیت (D,J,V,R,B,S,M,P,O)",Check_Event,"35,824 رویداد",PROVEN,فعال,MUST,A,وضعیت پایانی هر چک برابر؛ E08.3,READER_READY
-CHQ-03,چک,اسناد خودکار هر تغییر وضعیت,"Sanad_Type 0, SND_INDX J/V/M",الگوی حساب,PROVEN,فعال,MUST,A,تطبیق 104/402 با سیستم چک,READER_READY
-CHQ-04,چک,خرج چک به شخص ثالث و برگشت از خرج,"V با SarFasl, S",466 مسیر,PROVEN,فعال,MUST,A,برابر,DESIGNED
+CHQ-02,چک,"تاریخچه وضعیت (D,J,V,R,B,S,M,P,O)",Check_Event,"35,824 رویداد",PROVEN,فعال,MUST,A,"۳۵,۶۱۴ رویداد با مکان صریح از/به (core.cheque_event)؛ زنجیره مکان در پایگاه اجبار می‌شود (E18)",VERIFIED
+CHQ-03,چک,اسناد خودکار هر تغییر وضعیت,"Sanad_Type 0, SND_INDX J/V/M",الگوی حساب,PROVEN,فعال,MUST,A,"سند هر رویداد = بد «به» / بس «از»: ۶,۲۲۹ از ۶,۲۳۰ سند چک هلو عیناً برابر؛ تنها استثنا دریافت تاریخ‌گذشته (W-34) که مدل جدید رد می‌کند",VERIFIED
+CHQ-04,چک,خرج چک به شخص ثالث و برگشت از خرج,"V با SarFasl, S",466 مسیر,PROVEN,فعال,MUST,A,۹۵۳ خرج و ۴۷۹ برگشت از خرج با طرف صریح؛ «۰۰۰۰۰» ممنوع (W-32),VERIFIED
 CHQ-05,چک,عودت/Undo وضعیت چک,Process EC «عودت…»,~850 عملیات,PROVEN,فعال,MUST,C,جایگزین: رویداد معکوس (نه حذف تاریخچه),DESIGNED
-CHQ-06,چک,پرچم‌های وضعیت در جدول Check,"Vosool, DarJaryan, …",ناسازگار با رویداد,PROVEN,—,NO,C,فقط از رویدادها مشتق شود,READER_READY
-CHQ-07,چک,چک ضمانت/امانی,TAZMIN + 001/002,399,PROVEN,فعال,MUST,A,برابر,DESIGNED
+CHQ-06,چک,پرچم‌های وضعیت در جدول Check,"Vosool, DarJaryan, …",ناسازگار با رویداد,PROVEN,—,NO,C,مکان و وضعیت فقط از رویدادها مشتق می‌شود (core.cheque_location),IMPLEMENTED
+CHQ-07,چک,چک ضمانت/امانی,TAZMIN + 001/002,399,PROVEN,فعال,MUST,A,دفتر چک ضمانت (core.guarantee_instrument) با ضامن الزامی: ۲۷۲ سند انتظامی عیناً برابر در سطح حساب (W-35),VERIFIED
 CHQ-08,چک,گزارش چک دریافتی/پرداختی، لیست چک‌ها,گزارش هلو,38+6+1 اجرا,PROVEN,فعال,MUST,A,برابر,TODO
-CHQ-09,چک,چک‌های افتتاحیه از سال قبل,SND_INDX A (Sanad 1),"6,535",PROVEN,فعال,MUST,A,برابر,READER_READY
+CHQ-09,چک,چک‌های افتتاحیه از سال قبل,SND_INDX A (Sanad 1),"6,535",PROVEN,فعال,MUST,A,چک‌های افتتاحیه به‌عنوان موقعیت آغاز (از 005 به مکان) منتقل و برابر سند افتتاحیه هلو,VERIFIED
 TAX-01,مالیات,ارسال به سامانه مؤدیان و وضعیت,"FACTURE.StateTax/FTaxId/UId/SerialFact, TaxLog",SendType 1..6,PROVEN,"20,608 ارسال",MUST,B,وضعیت هر فاکتور برابر؛ تطبیق دفاتر↔مؤدیان,READER_READY
 TAX-02,مالیات,ابطال در مؤدیان,TaxLog SendType 3,4,PROVEN,4,MUST,B,هم‌زمان با سند معکوس,READER_READY
 TAX-03,مالیات,مالیات بر ارزش افزوده روی فاکتور,Sum_Levy/Sum_Scot/Levy/Scot؛ MSETUP2 VAT/Darsad_Maliat/Darsad_Avarez,همه صفر؛ هیچ ثبتی در حساب‌های VAT (E13.6–E13.7),PROVEN,صفر,MUST,A,D-01: رفتار هلو حفظ می‌شود (vat_mode=holoo_compatible؛ مقدار منبع ذخیره، بدون محاسبه حدسی)؛ core test_d01_*,IMPLEMENTED

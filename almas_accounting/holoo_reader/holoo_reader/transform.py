@@ -99,7 +99,11 @@ def build_silver(bronze_dir: str, silver_path: str, meta: dict) -> dict:
     load("INSERT INTO voucher_link SELECT Sanad_Code, NULLIF(Fac_Type,''), NULLIF(Fac_Code,''), NULLIF(Check_Code,0), _row_hash FROM {SND_INDX}", "SND_INDX")
     load("INSERT INTO cashbox SELECT Id, Parent_Id, S_Type, clean(S_Name), NULLIF(Sarfasl_Code,''), NULLIF(Sarfasl_Code2,''), _row_hash FROM {Cash}", "Cash")
     load("""INSERT INTO bank_account SELECT Id, C_Code, Bank_Code, Account_N, clean(Branch_Name), Col_Code || Moien_Code || Tafzili_Code,
-            coalesce(Pos,false), coalesce(IsActive,true), _row_hash FROM {ACOUND_N}""", "ACOUND_N")
+            coalesce(Pos,false), coalesce(IsActive,true),
+            NULLIF(coalesce(Dar_Col_Code,'') || coalesce(Dar_Moien_Code,'') || coalesce(Dar_Tafzili_Code,''), ''),
+            NULLIF(coalesce(Par_Col_Code,'') || coalesce(Par_Moien_Code,'') || coalesce(Par_Tafzili_Code,''), ''),
+            NULLIF(coalesce(Wage_Col_Code,'') || coalesce(Wage_Moien_Code,'') || coalesce(Wage_Tafzili_Code,''), ''),
+            _row_hash FROM {ACOUND_N}""", "ACOUND_N")
     load("INSERT INTO bank SELECT Bank_Code, clean(Bank_Name), _row_hash FROM {NEWBANK}", "NEWBANK")
     load("""INSERT INTO cheque SELECT Check_Code, CASE WHEN Daryaft_Pardakht THEN 'in' ELSE 'out' END, Check_Number, NULLIF(Sayad_Number,''),
             Cust, Bank_Code, Account_Number, clean(Branch), CAST(Export_Date AS DATE), CAST(Receive_Date AS DATE), C_Code_Source,
