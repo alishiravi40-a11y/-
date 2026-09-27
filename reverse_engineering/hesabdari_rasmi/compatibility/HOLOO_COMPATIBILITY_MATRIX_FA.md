@@ -21,10 +21,10 @@
 
 | وضعیت آینده | تعداد |
 |---|---:|
-| READER_READY | 36 |
+| READER_READY | 35 |
 | TODO | 25 |
 | DESIGNED | 17 |
-| VERIFIED | 10 |
+| VERIFIED | 11 |
 | IMPLEMENTED | 7 |
 
 ## حسابداری
@@ -32,17 +32,17 @@
 | ID | قابلیت | منبع داده هلو | اثبات | کاربرد ۱۴۰۴ | نیاز | دسته | آزمون برابری | وضعیت |
 |---|---|---|---|---|---|---|---|---|
 | ACC-01 | کدینگ سه‌سطحی کل/معین/تفصیلی | `SARFASL(Col,Moien,Tafzili,Sarfasl_Code,Parent,SParent)` | PROVEN | 33,564 حساب | MUST | B | همه کدها و نام‌ها و درخت پس از Import برابر؛ تعداد هر سطح | READER_READY |
-| ACC-02 | حساب شخص در سطح معین (کدینگ ترکیبی قدیمی) | `CUSTOMER.*_Bed/_Bes → SARFASL (len 7)` | PROVEN | 9,977 شخص | MUST | B | نگاشت شخص↔حساب برای هر C_Code برابر؛ مانده هر شخص برابر | READER_READY |
+| ACC-02 | حساب شخص در سطح معین (کدینگ ترکیبی قدیمی) | `CUSTOMER.*_Bed/_Bes → SARFASL (len 7)` | PROVEN | 9,977 شخص | MUST | B | D-03 ✅: شخص = بُعد فرعی روی حساب کنترلی (1030008… / 103P / 401P)؛ انتقال ۳۲,۷۰۵ حساب شخص؛ مانده هر شخص = View هلو (صفر اختلاف) | VERIFIED |
 | ACC-03 | ماهیت حساب، گروه ترازنامه/سود و زیان | `SARFASL.Mahiat, Group → GROP_SAR` | PROVEN | همه حساب‌ها | MUST | A | ترازنامه و سود و زیان بازسازی‌شده = سند بستن هلو | READER_READY |
 | ACC-04 | نقش سیستمی حساب‌ها (حساب پیش‌فرض عملیات) | `SarfaslType(59), SARFASL.Type, MSETUP2 Sar*` | PROVEN | فعال | MUST | B | هر نقش به همان حساب نگاشت شود | READER_READY |
-| ACC-05 | سند و ردیف سند (بدهکار/بستانکار) | `SANAD, SND_LIST` | PROVEN | 47,447 سند / 190,469 ردیف | MUST | A | C-01..C-02؛ جمع بد/بس هر سند و کل برابر | VERIFIED |
+| ACC-05 | سند و ردیف سند (بدهکار/بستانکار) | `SANAD, SND_LIST` | PROVEN | 47,447 سند / 190,469 ردیف | MUST | A | انتقال کامل ۴۷,۴۴۷ سند ۱۴۰۴ به هسته با قواعد توازن/برگ/شخص؛ برابری کامل (migration/) | VERIFIED |
 | ACC-06 | شماره ثابت + شماره عطف (بازشماره‌گذاری به ترتیب تاریخ) | `SANAD.Sanad_Code, Sanad_Code_C/_C2` | PROVEN | فعال | MUST | B | هر دو شماره حفظ؛ ترتیب عطف = ترتیب تاریخ | READER_READY |
 | ACC-07 | انواع سند (فروش/خرید/دستی/دریافت/پرداخت/انتقال/چک/کارمزد) | `SANAD.Sanad_Type` | PROVEN | فعال | MUST | A | توزیع انواع و الگوی حساب هر نوع برابر | READER_READY |
 | ACC-08 | نوع ردیف (F/S/Z/خالی) برای ارتباط ردیف با فاکتور و تسویه | `SND_LIST.Type_Line` | PROVEN | فعال | MUST | B | Type_Line هر ردیف حفظ و به نقش معنایی نگاشت | READER_READY |
 | ACC-09 | ردیف خارج از دفتر (Show_Daftar=0) — سازوکار ابطال فاکتور | `SND_LIST.Show_Daftar` | PROVEN | 14 ردیف | MUST | C | Reader: ردیف‌های پنهان خارج از دفتر؛ سیستم جدید: سند معکوس به‌جای پنهان‌سازی | READER_READY |
 | ACC-10 | افتتاحیه/بستن موقت/اختتامیه | `SANAD.sanad_state 1/2/3؛ حساب 005/006` | PROVEN | فعال | MUST | B | سند بستن بازتولیدشده = سند هلو؛ همه حساب‌ها پس از اختتامیه صفر (R-07) | VERIFIED |
 | ACC-11 | موجودی ادواری و COGS در بستن سال | `اسناد بستن + ARTICLE.Exist×Buy_Price` | PROVEN | فعال | MUST | B | COGS=7,699,284,125,059 بازتولید شود | VERIFIED |
-| ACC-12 | مانده حساب (دفتر کل/معین/تفصیلی) | `MandehOfSarfasl, W_SarfaslMandeh` | PROVEN | گزارش پرکاربرد | MUST | A | مانده هر حساب در هر تاریخ برابر | VERIFIED |
+| ACC-12 | مانده حساب (دفتر کل/معین/تفصیلی) | `MandehOfSarfasl, W_SarfaslMandeh` | PROVEN | گزارش پرکاربرد | MUST | A | مانده ۱۰,۰۳۸ کد (کل/معین/تفصیلی) در هسته جدید = View هلو MandehOfSarfasl (صفر اختلاف) | VERIFIED |
 | ACC-13 | Cache مانده حساب | `SARFASL.Mandeh` | PROVEN | فعال | NO | C | جایگزین: محاسبه/Materialized view با کنترل | DESIGNED |
 | ACC-14 | نسخه‌های سند افتتاحیه | `Sanad_Edit, snd_list_Edit` | PROVEN | 12 | MUST | B | همه نسخه‌ها Import و قابل مقایسه | READER_READY |
 | ACC-15 | دفتر روزنامه، دفتر معین، مرور حساب | `گزارش‌های هلو (Log A4)؛ تابع Calc_BedBes_UseInFuncDateBetween2` | PROVEN | 143+13+8 اجرا | MUST | A | P-05: گردش ماهانه بدهکار/بستانکار همه اشخاص = تابع خود هلو (31,588 مقدار، صفر اختلاف)؛ View analytics.trial_balance_4col | VERIFIED |

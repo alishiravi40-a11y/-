@@ -1,6 +1,6 @@
 """Holoo legacy persons → core parties: read-only, idempotent, lineage-preserving (beta/legacy.py)."""
 from beta import legacy
-from conftest import nid
+from beta.common import make_national_id as nid
 
 MIRROR = """
 CREATE SCHEMA holoo_mirror;

@@ -54,3 +54,9 @@ def find_party(conn, nc: str | None):
             return pid
         pid = nxt
     return None
+
+
+def make_national_id(prefix9: str) -> str:
+    """A checksum-valid Iranian national id from a 9-digit prefix (used by tests and synthetic data)."""
+    s = sum(int(prefix9[i]) * (10 - i) for i in range(9)) % 11
+    return prefix9 + str(s if s < 2 else 11 - s)

@@ -5,7 +5,7 @@ import psycopg
 import pytest
 
 from beta import contracts
-from conftest import nid
+from beta.common import make_national_id as nid
 
 Denied = psycopg.errors.InsufficientPrivilege
 Raised = psycopg.errors.RaiseException

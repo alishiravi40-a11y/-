@@ -4,7 +4,7 @@ import datetime as dt
 import pytest
 
 from beta import contracts, snapshot_import as SI, statement_import as ST
-from conftest import nid
+from beta.common import make_national_id as nid
 
 N1, N2 = nid("051234567"), nid("062345678")
 

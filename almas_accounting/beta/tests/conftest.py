@@ -14,10 +14,7 @@ ALL_PERMS = ["security.admin", "settings.change", "party.merge", "beta.scheme_ma
              "beta.receipt_manage", "beta.refund", "beta.credit_reallocate", "beta.review"]
 
 
-def nid(prefix: str) -> str:
-    """A valid Iranian national id from a 9-digit prefix."""
-    s = sum(int(prefix[i]) * (10 - i) for i in range(9)) % 11
-    return prefix + str(s if s < 2 else 11 - s)
+from beta.common import make_national_id as nid  # noqa: E402
 
 
 @pytest.fixture()
