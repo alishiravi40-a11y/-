@@ -202,7 +202,7 @@ def migrate(conn, db: str, user: str = "holoo-migration") -> dict:
                     conn.execute("""INSERT INTO core.cheque_event (cheque_id, state, effective_date, event_type, from_account_id, from_party_id, to_account_id,
                                            to_party_id, legacy_source_db, legacy_event_id, legacy_voucher)
                                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                                 (ids[chk], e[2], e[3], "received" if t == "opening" else t, fa[0], fa[1], ta[0], ta[1], db, eid, e[4]))
+                                 (ids[chk], e[2], e[3], "opening_position" if t == "opening" else t, fa[0], fa[1], ta[0], ta[1], db, eid, e[4]))
             except Exception as ex:                      # location chain broken: Holoo recorded a move from where the cheque was not
                 stats["chain_conflict"] += 1; broken.add(chk)
                 conflicts.append((chk, e[2], t, f, to, str(e[3])[:10], e[4]))

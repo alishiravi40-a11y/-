@@ -174,8 +174,11 @@ def cheque_states(pg, sql, db):
         else:
             t = HOLOO_STATE.get(st, "unknown:" + st)
         holoo[chk] = t
-    core = dict(pg.execute("""SELECT c.holoo_check_code, l.last_event FROM core.cheque_location l JOIN core.cheque c ON c.id = l.cheque_id
-                              WHERE c.legacy_source_db = %s""", (db,)).fetchall())
+    # an opening position is the state the cheque was carried in from the previous year (kept in cheque_event.state)
+    core = {k: (HOLOO_STATE.get(st, st) if ev == "opening_position" else ev) for k, ev, st in pg.execute(
+        """SELECT c.holoo_check_code, l.last_event, (SELECT e.state FROM core.cheque_event e WHERE e.cheque_id = l.cheque_id AND e.event_type IS NOT NULL
+                   ORDER BY e.effective_date DESC, e.id DESC LIMIT 1)
+           FROM core.cheque_location l JOIN core.cheque c ON c.id = l.cheque_id WHERE c.legacy_source_db = %s""", (db,)).fetchall()}
     both = set(holoo) & set(core)
     same = sum(1 for k in both if holoo[k] == core[k])
     diff = collections.Counter((holoo[k], core[k]) for k in both if holoo[k] != core[k])

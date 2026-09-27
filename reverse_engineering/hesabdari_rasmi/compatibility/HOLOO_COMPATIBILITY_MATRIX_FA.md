@@ -21,11 +21,11 @@
 
 | وضعیت آینده | تعداد |
 |---|---:|
-| VERIFIED | 30 |
-| READER_READY | 24 |
-| TODO | 24 |
-| IMPLEMENTED | 9 |
-| DESIGNED | 8 |
+| VERIFIED | 33 |
+| TODO | 23 |
+| READER_READY | 22 |
+| IMPLEMENTED | 12 |
+| DESIGNED | 5 |
 
 ## حسابداری
 
@@ -107,11 +107,11 @@
 
 | ID | قابلیت | منبع داده هلو | اثبات | کاربرد ۱۴۰۴ | نیاز | دسته | آزمون برابری | وضعیت |
 |---|---|---|---|---|---|---|---|---|
-| INV-02 | انبار = گروه اصلی؛ هر مدل در هر انبار کالای جدا | `M_GROUP; حواله S/D` | PROVEN | 20 گروه | MUST | C | جایگزین: کالای واحد × انبار؛ Import باید کالاهای هم‌نام را یکی کند | DESIGNED |
-| INV-03 | حواله بین انبارها (بدون سند) | `FACTURE S/D` | PROVEN | 482 | MUST | B | مقدار و ارزش انتقال برابر | READER_READY |
+| INV-02 | انبار = گروه اصلی؛ هر مدل در هر انبار کالای جدا | `M_GROUP; حواله S/D` | PROVEN | 20 گروه | MUST | C | کالا = مدل (D-13) × انبار (012)؛ مقدار موجودی ۹,۵۹۶ از ۹,۵۹۶ کد کالای هلو برابر (E23) | VERIFIED |
+| INV-03 | حواله بین انبارها (بدون سند) | `FACTURE S/D` | PROVEN | 482 | MUST | B | انتقال جفت خروجی/ورودی به میانگین انبار مبدأ؛ مقدارها برابر (E23) | VERIFIED |
 | INV-04 | موجودی = اول دوره + ورودی − خروجی | `ARTICLE.Exist, FACTART` | PROVEN | فعال | MUST | A | C-07 / E11.1 | VERIFIED |
-| INV-05 | میانگین موزون متحرک | `ARTICLE.Buy_Price, FACTART.Buy_Price` | PROVEN | فعال | MUST | B | ارزش پایان دوره هر کالا برابر؛ اختلاف‌ها توضیح داده شوند | DESIGNED |
-| INV-06 | منع منفی شدن موجودی | `MSETUP2.Negative_*` | NEEDS_MORE_EVIDENCE | ناقص | MUST | C | جایگزین: کنترل منفی بر مبنای تاریخ مؤثر | DESIGNED |
+| INV-05 | میانگین موزون متحرک | `ARTICLE.Buy_Price, FACTART.Buy_Price` | PROVEN | فعال | MUST | B | قاعده هلو از View خودش (تاریخ، ساعت، ترتیب نوع): ۹۳٪ ردیف‌ها؛ در مدل‌های بدون سابقه منفی ۱,۸۱۷/۱,۸۲۳؛ بها همیشه مشتق (W-10)؛ ارزش پایان سال ۰.۰۰۳٪ اختلاف (E23) | IMPLEMENTED |
+| INV-06 | منع منفی شدن موجودی | `MSETUP2.Negative_*` | NEEDS_MORE_EVIDENCE | ناقص | MUST | C | موجودی منفی برای حرکت جدید رد می‌شود (Trigger، آزمون)؛ ۱۶۹ کالا×انبار منفی تاریخی هلو فهرست می‌شود | IMPLEMENTED |
 | INV-07 | ضایعات | `FACTURE Z؛ سند 6010006/8010001` | PROVEN | 3 | MUST | B | برابر | READER_READY |
 | INV-08 | انبارگردانی | `sp_AnbarGard*` | PROVEN | استفاده نشده | MUST | C | قابلیت جدید با سند اصلاح موجودی | TODO |
 | INV-09 | کاردکس مقداری و ریالی کالا | `W_ArtKardex*, گزارش هلو` | PROVEN | فعال | MUST | A | کاردکس یک کالای نمونه برابر | VERIFIED |
@@ -123,7 +123,7 @@
 |---|---|---|---|---|---|---|---|---|
 | INV-11 | کد جایگزین/بارکد، شناسه مالیاتی کالا | `A_Code_C, ArticleCodes, A_codeIdTax` | PROVEN | فعال | MUST | A | برابر | TODO |
 | INV-12 | حداقل/حداکثر، محل نگهداری، تصویر، سریال، انقضا | `A_Min/A_Max, Place, Picture, ANB_SER, EXPDate` | PROVEN | استفاده نشده | OPTIONAL | D | — | TODO |
-| INV-13 | موجودی اول دوره منفی از سال قبل | `ARTICLE.First_exist<0` | PROVEN | 12 | MUST | C | Import باید هشدار دهد؛ سیستم جدید اجازه ندهد | READER_READY |
+| INV-13 | موجودی اول دوره منفی از سال قبل | `ARTICLE.First_exist<0` | PROVEN | 12 | MUST | C | ۱۲ افتتاحیه منفی هلو فقط به‌عنوان حرکت legacy پذیرفته و گزارش می‌شود | IMPLEMENTED |
 
 ## خزانه
 
@@ -150,7 +150,7 @@
 | CHQ-05 | عودت/Undo وضعیت چک | `Process EC «عودت…»` | PROVEN | فعال | MUST | C | جایگزین: رویداد معکوس (نه حذف تاریخچه) | DESIGNED |
 | CHQ-06 | پرچم‌های وضعیت در جدول Check | `Vosool, DarJaryan, …` | PROVEN | — | NO | C | مکان و وضعیت فقط از رویدادها مشتق می‌شود (core.cheque_location) | IMPLEMENTED |
 | CHQ-07 | چک ضمانت/امانی | `TAZMIN + 001/002` | PROVEN | فعال | MUST | A | دفتر چک ضمانت (core.guarantee_instrument) با ضامن الزامی: ۲۷۲ سند انتظامی عیناً برابر در سطح حساب (W-35) | VERIFIED |
-| CHQ-08 | گزارش چک دریافتی/پرداختی، لیست چک‌ها | `گزارش هلو` | PROVEN | فعال | MUST | A | برابر | TODO |
+| CHQ-08 | گزارش چک دریافتی/پرداختی، لیست چک‌ها | `گزارش هلو` | PROVEN | فعال | MUST | A | وضعیت هر چک (RetVazeatCheck آخرین رویداد) با مدل مکان مقایسه شد؛ تنها استثنا ۲ چک W-34 (E20) | VERIFIED |
 | CHQ-09 | چک‌های افتتاحیه از سال قبل | `SND_INDX A (Sanad 1)` | PROVEN | فعال | MUST | A | چک‌های افتتاحیه به‌عنوان موقعیت آغاز (از 005 به مکان) منتقل و برابر سند افتتاحیه هلو | VERIFIED |
 
 ## مالیات

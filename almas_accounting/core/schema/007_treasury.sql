@@ -23,6 +23,7 @@ ALTER TABLE core.cheque
 
 ALTER TABLE core.cheque_event
   ADD COLUMN event_type text CHECK (event_type IN (
+      'opening_position',                          -- position carried from the previous year (state = where it was)
       'received', 'deposited_for_collection', 'collected', 'returned_from_bank', 'moved_between_cashboxes',
       'returned_to_payer', 'endorsed_to_party', 'returned_by_endorsee', 'cashed',
       'issued', 'paid_by_bank', 'settled_otherwise')),
