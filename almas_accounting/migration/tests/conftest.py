@@ -12,7 +12,7 @@ SCHEMA = "\n".join((ROOT / "core" / "schema" / f).read_text(encoding="utf-8")
                    for f in ("001_core.sql", "002_decisions.sql", "003_below_cost_alerts.sql", "004_beta.sql", "005_legacy_ledger.sql",
                              "006_posting.sql", "007_treasury.sql", "008_receivables.sql",
                              "009_reports.sql", "010_bank_reconciliation.sql", "011_year_end.sql", "012_inventory.sql", "013_ai_catalog.sql", "014_tax.sql", "015_commercial_documents.sql", "016_returns.sql", "017_control_inbox.sql",
-                             "018_document_api.sql", "019_forms_support.sql", "020_management_reports.sql", "021_beta_api_agents.sql", "022_agent_deals.sql", "023_party_role_separation.sql"))
+                             "018_document_api.sql", "019_forms_support.sql", "020_management_reports.sql", "021_beta_api_agents.sql", "022_agent_deals.sql", "023_party_role_separation.sql", "024_agent_ui_reads.sql"))
 MIRROR = """
 CREATE SCHEMA holoo_mirror;
 CREATE TABLE holoo_mirror.import_run (run_id text PRIMARY KEY, source_db text);

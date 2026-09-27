@@ -26,27 +26,23 @@ label{color:var(--muted);font-size:13px}select,input{font:inherit;padding:6px 8p
   <div class="row" style="margin:0"><label>کاربر <input id="user" size="12" autocomplete="username"></label><button class="btn" id="login">ورود</button></div>
 </header>
 <main>
-  <nav role="tablist">
-    <button role="tab" data-tab="inbox" aria-selected="true">کارتابل کنترل‌ها</button>
-    <button role="tab" data-tab="sale" aria-selected="false">فاکتور فروش</button>
-    <button role="tab" data-tab="purchase" aria-selected="false">فاکتور خرید</button>
-    <button role="tab" data-tab="ret" aria-selected="false">برگشت</button>
-    <button role="tab" data-tab="receipt" aria-selected="false">دریافت وجه</button>
-    <button role="tab" data-tab="payment" aria-selected="false">پرداخت وجه</button>
-    <button role="tab" data-tab="settle" aria-selected="false">تطبیق حساب شخص</button>
-    <button role="tab" data-tab="aging" aria-selected="false">سن‌بندی حساب اشخاص</button>
-    <button role="tab" data-tab="tb" aria-selected="false">تراز چهارستونی</button>
-    <button role="tab" data-tab="mgmt" aria-selected="false">گزارش مدیریتی</button>
-    <button role="tab" data-tab="ops" aria-selected="false">عملیات مجاز من</button>
-  </nav>
+  <nav role="tablist" id="nav"></nav>
   <section id="view"><p class="muted">نام کاربری را وارد کنید.</p></section>
 </main>
 <script>
 // This page holds NO accounting rule: every step is a catalogued operation of the core, called through the API.
 const $ = s => document.querySelector(s);
-const AREA = {sales: 'فروش', receivables: 'مطالبات', cheques: 'چک', inventory: 'موجودی', tax: 'مؤدیان', beta: 'اقساط بتا', ledger: 'دفتر'};
-const TEXT_COLS = new Set(['code', 'account_code', 'control', 'operation', 'basis', 'function_signature', 'number']);
-const DATE_COLS = new Set(['oldest_open_due', 'since', 'effective_date', 'invoice_date', 'due_date']);
+const AREA = {sales: 'فروش', receivables: 'مطالبات', cheques: 'چک', inventory: 'موجودی', tax: 'مؤدیان', beta: 'اقساط بتا', ledger: 'دفتر', agents: 'نمایندگان', legacy: 'میراث هلو'};
+// central staff and agent users see different tabs; an agent user is recognised by what the core lets it do (agent workspace only)
+const CENTRAL_TABS = [['inbox', 'کارتابل کنترل‌ها'], ['sale', 'فاکتور فروش'], ['purchase', 'فاکتور خرید'], ['ret', 'برگشت'], ['receipt', 'دریافت وجه'],
+  ['payment', 'پرداخت وجه'], ['settle', 'تطبیق حساب شخص'], ['aging', 'سن‌بندی حساب اشخاص'], ['tb', 'تراز چهارستونی'], ['mgmt', 'گزارش مدیریتی'],
+  ['agents', 'نمایندگان'], ['attrib', 'انتساب فروش بانک'], ['agentpay', 'تسویه با نماینده'], ['ops', 'عملیات مجاز من']];
+const AGENT_TABS = [['mydeals', 'معامله‌های من'], ['mycases', 'مشتریان و پرونده‌های من'], ['ops', 'عملیات مجاز من']];
+let isAgent = false;
+const METHOD = {bank_transfer: 'بانکی', cash: 'نقد', dornatel_wallet: 'کیف پول درناتل'};
+const TEXT_COLS = new Set(['code', 'account_code', 'control', 'operation', 'basis', 'function_signature', 'number', 'national_id', 'buyer_national_id',
+  'customer_national_id', 'bank_ref', 'ref', 'agent_code', 'proposed_agent_code', 'deal_id', 'evidence_ref', 'beta_order_id']);
+const DATE_COLS = new Set(['oldest_open_due', 'since', 'effective_date', 'invoice_date', 'due_date', 'sale_date', 'registered_at', 'next_due', 'declared_at', 'created_at']);
 const fmt = v => v === null || v === undefined ? '—' : (/^-?\d+(\.\d+)?$/.test(String(v)) ? Number(v).toLocaleString('fa-IR') : v);
 
 // ---- Jalali dates: stored in the standard calendar, entered and shown in Jalali. The browser's own Persian calendar is
@@ -168,6 +164,87 @@ const views = {
       '<p class="muted">بهای فروش ماهانه از کاردکس برآورد می‌شود (موجودی ادواری، D-02). بهای قطعی سال همان سند بستن سال است.</p></div>' +
       '<div class="card"><h2>موجودی کالا (بیشترین ارزش)</h2>' + table(inv.slice(0, 50), [['item_name', 'کالا'], ['warehouse_name', 'انبار'], ['qty', 'مقدار'],
         ['avg_cost', 'میانگین بها'], ['value', 'ارزش'], ['days_since_last_sale', 'روز از آخرین فروش']]) + '</div>';
+  },
+  // ---- central: agents (their sales with the real buyer, pending base amounts) ----
+  async agents() {
+    const [ov, pend, list] = await Promise.all([op('agents.overview', {}), op('agents.deals_pending', {}), op('agents.list', {})]);
+    const sel = (window._keep || {}).agsel || '';
+    window._after = () => { $('#agsel').value = sel; $('#agsel').onchange = () => show('agents'); };
+    let out = '<div class="card"><h2>نمایندگان — سه نقش جدا</h2>' + table(ov, [['code', 'کد'], ['title', 'نماینده'], ['sales_as_agent', 'فروش به‌عنوان نماینده'],
+        ['buyers_beta_total', 'مبلغ کل بتای خریداران'], ['owed_to_agent', 'طلب نماینده'], ['open_to_agent', 'مانده تسویه‌نشده'],
+        ['own_contracts_as_customer', 'خرید شخصی (نقش مشتری)'], ['legacy_aggregate_balance', 'میراث تجمیعی هلو'], ['legacy_unclassified', 'میراث بی‌خریدار']]) +
+      '<p class="muted">فروش‌های نماینده متعلق به خریداران واقعی است و بدهی شخصی او نیست. خرید شخصی او جدا شمرده می‌شود.</p></div>';
+    out += `<div class="card"><div class="row"><label>گزارش نماینده <select id="agsel"><option value="">—</option>${options(list, 'agent_id', 'title')}</select></label></div>`;
+    if (sel) out += table((await op('agents.report', {p_agent: Number(sel)})).map(r => ({...r, methods: (r.settlement_methods || []).map(m => METHOD[m] || m).join('، ') || '—'})), [['bank_ref', 'شناسه بانک'], ['registered_at', 'تاریخ ثبت'], ['buyer_name', 'خریدار واقعی'],
+        ['buyer_national_id', 'کد ملی خریدار'], ['beta_total', 'مبلغ کل بتا'], ['base_amount', 'مبلغ پایه'], ['owed_to_agent', 'طلب'], ['settled', 'تسویه‌شده'],
+        ['open_to_agent', 'مانده'], ['methods', 'روش تسویه'], ['state_fa', 'وضعیت']]);
+    out += '</div><div class="card"><h2>معامله‌های در انتظار تأیید مبلغ پایه</h2>' +
+      table(pend.map(r => ({...r, bank: r.bank_ref ? `${r.bank_ref}${r.customer_matches === false ? ' ⚠ خریدار متفاوت' : ''}` : 'در بانک دیده نشده',
+          act: `<button class="btn primary" onclick="window._approve(${r.deal_id})">تأیید</button> <button class="btn" onclick="window._reject(${r.deal_id})">رد</button>`})),
+        [['deal_id', 'معامله'], ['agent_code', 'نماینده'], ['sale_date', 'تاریخ فروش'], ['customer_national_id', 'کد ملی خریدار'], ['goods_description', 'کالا'],
+         ['base_amount', 'مبلغ پایه (ریال)'], ['evidence_ref', 'مدرک'], ['bank', 'فروش بانکی'], ['beta_total', 'مبلغ کل بتا'], ['act', '', 'html']]) +
+      '<p class="muted">تأیید، دقیقاً «مبلغ پایه» را طلب نماینده می‌کند، نه مبلغ کل بتا. تفاوت این دو سود حساب نمی‌شود (D-26).</p><div id="agmsg"></div></div>';
+    window._approve = async id => { try { await op('agent.deal_approve', {p_deal: id}); show('agents'); } catch (e) { $('#agmsg').innerHTML = `<p class="err">${e.message}</p>`; } };
+    window._reject = async id => { const r = prompt('علت رد:'); if (!r) return;
+      try { await op('agent.deal_close', {p_deal: id, p_status: 'rejected', p_reason: r}); show('agents'); } catch (e) { $('#agmsg').innerHTML = `<p class="err">${e.message}</p>`; } };
+    return out;
+  },
+  // ---- central: attribution of bank sales to agents — proposals with reasons; a person decides ----
+  async attrib() {
+    const [q, list] = await Promise.all([op('agents.attribution_queue', {p_limit: 200}), op('agents.list', {})]);
+    const STATE = {proposed: 'پیشنهاد قوی', conflict: 'متعارض', weak: 'ضعیف', no_candidate: 'بدون نشانه'};
+    window._qrows = q;
+    const rows = q.map((r, i) => ({...r, st: STATE[r.state] || r.state,
+      act: r.state === 'proposed'
+        ? `<button class="btn primary" onclick="window._confirm(${i})">تأیید پیشنهاد</button>`
+        : `<select id="qa${i}"><option value="">نماینده…</option>${options(list, 'agent_id', 'code')}</select> <button class="btn" onclick="window._manual(${i})">انتساب با علت</button>`}));
+    window._confirm = async i => { const r = window._qrows[i];
+      try { await op('agent.attribute', {p_scheme: r.scheme_id, p_source: r.source, p_ref: r.ref, p_agent: r.proposed_agent_id, p_deal: r.proposed_deal_id, p_method: 'auto'});
+            show('attrib'); } catch (e) { $('#qmsg').innerHTML = `<p class="err">${e.message}</p>`; } };
+    window._manual = async i => { const r = window._qrows[i], a = $('#qa' + i).value; if (!a) return;
+      const why = prompt('علت انتساب دستی (مدرک):'); if (!why) return;
+      try { await op('agent.attribute', {p_scheme: r.scheme_id, p_source: r.source, p_ref: r.ref, p_agent: Number(a), p_deal: null, p_method: 'manual', p_reason: why});
+            show('attrib'); } catch (e) { $('#qmsg').innerHTML = `<p class="err">${e.message}</p>`; } };
+    return '<div class="card"><h2>فروش‌های بانک در انتظار انتساب به نماینده</h2>' + table(rows, [['ref', 'شناسه بانک'], ['registered_at', 'تاریخ ثبت'],
+        ['national_id', 'کد ملی خریدار'], ['total_amount', 'مبلغ کل'], ['st', 'وضعیت'], ['proposed_agent_code', 'نماینده پیشنهادی'], ['reasons', 'دلیل'], ['act', '', 'html']]) +
+      '<p class="muted">هیچ فروشی حدسی منتسب نمی‌شود: پیشنهاد فقط از شناسه اعلام‌شده نماینده، ثبت‌کننده پنل طبق نگاشت الماس، یا خریدار و تاریخ ساخته می‌شود؛ بقیه با علت و Audit.</p><div id="qmsg"></div></div>';
+  },
+  // ---- central: pay an agent by bank transfer or Dornatel wallet, allocated to its deals ----
+  async agentpay() {
+    const [list, banks] = await Promise.all([op('agents.list', {}), op('bank_accounts.list', {})]);
+    const sel = (window._keep || {}).psel || '';
+    window._after = () => { $('#psel').value = sel; $('#psel').onchange = () => show('agentpay'); wirePay(); };
+    let out = `<div class="card"><div class="row"><label>نماینده <select id="psel"><option value="">—</option>${options(list, 'agent_id', 'title')}</select></label></div>`;
+    if (!sel) return out + '</div>';
+    const ents = await op('agents.open_entitlements', {p_agent: Number(sel)});
+    window._ents = ents;
+    out += table(ents.map((r, i) => ({...r, pay: `<input type="number" min="0" max="${r.open_amount}" value="${r.open_amount}" data-ent="${r.entitlement_id}" style="width:130px">`})),
+      [['deal_id', 'معامله'], ['customer_national_id', 'کد ملی خریدار'], ['amount', 'طلب'], ['settled', 'تسویه‌شده'], ['open_amount', 'مانده'], ['pay', 'پرداخت این بار', 'html']]);
+    return out + `<div class="row">${dateInput('pdate')}<label>روش <select id="pmethod"><option value="bank_transfer">انتقال بانکی</option><option value="dornatel_wallet">شارژ کیف پول درناتل</option></select></label>
+      <label>از حساب بانکی الماس <select id="pbank">${options(banks, 'bank_account_id', 'title')}</select></label>
+      <label>مرجع پرداخت / شناسه تراکنش درناتل <input id="pref" size="16"></label><label>حساب کیف پول <input id="pwallet" size="10"></label>
+      <button class="btn primary" id="psave">ثبت تسویه</button></div><div id="pmsg"></div></div>`;
+  },
+  // ---- agent workspace ----
+  async mydeals() {
+    const rows = await op('agent.my_deals', {});
+    window._after = wireDeal;
+    return `<div class="card"><h2>اعلام فروش انجام‌شده در پنل بانک</h2><div class="row">${dateInput('ddate')}
+        <label>کد ملی خریدار <input id="dnc" size="12"></label><label>نام خریدار <input id="dname" size="18"></label>
+        <label>کالا <input id="dgoods" size="18"></label><label>مبلغ پایه کالا (ریال) <input id="dbase" type="number" min="1" style="width:150px"></label>
+        <label>شماره فاکتور/مدرک <input id="devid" size="12"></label></div>
+      <div class="row"><label>مبلغ کل قرارداد در پنل (اختیاری) <input id="dtotal" type="number" min="1" style="width:150px"></label>
+        <label>شناسه فروش در پنل (اختیاری) <input id="dref" size="12"></label><button class="btn primary" id="dsave">ثبت اعلام</button></div><div id="dmsg"></div>
+      <p class="muted">مبلغ پایه پس از تأیید الماس طلب شما می‌شود و معمولاً ظرف ۲۴ ساعت تسویه می‌شود.</p></div>
+      <div class="card"><h2>معامله‌های من</h2>` + table(rows.map(r => ({...r, bank: r.matched_with_bank ? 'بله' : 'هنوز نه'})), [['deal_id', 'معامله'], ['sale_date', 'تاریخ'],
+        ['customer_name', 'خریدار'], ['goods', 'کالا'], ['base_amount', 'مبلغ پایه'], ['status_fa', 'وضعیت'], ['bank', 'دیده شده در بانک'], ['owed', 'طلب'],
+        ['paid_by_bank', 'پرداخت بانکی'], ['paid_by_wallet', 'کیف پول درناتل'], ['open_amount', 'مانده']]) + '</div>';
+  },
+  async mycases() {
+    const [cases, cust] = await Promise.all([op('agent.my_cases', {}), op('agent.my_customers', {})]);
+    return '<div class="card"><h2>پرونده‌های من</h2>' + table(cases, [['beta_order_id', 'شناسه بانک'], ['customer_name', 'خریدار'], ['total_amount', 'مبلغ کل'],
+        ['installments', 'اقساط'], ['paid_count', 'پرداخت‌شده'], ['overdue_count', 'معوق'], ['outstanding', 'مانده مشتری'], ['next_due', 'سررسید بعدی'], ['next_amount', 'مبلغ قسط بعدی']]) +
+      '</div><div class="card"><h2>مشتریان من</h2>' + table(cust, [['name', 'نام'], ['national_id', 'کد ملی'], ['contracts', 'قرارداد'], ['outstanding', 'مانده'], ['overdue_count', 'قسط معوق']]) + '</div>';
   },
   async ops() {
     const rows = await api('/operations');
@@ -309,19 +386,63 @@ function wireSettle() {
   };
 }
 
+function wireDeal() {
+  $('#dsave').onclick = async () => {
+    const msg = $('#dmsg');
+    try {
+      const total = Number($('#dtotal').value) || null;
+      const id = one(await op('agent.deal_declare', {p_national_id: latin($('#dnc').value), p_customer_name: $('#dname').value, p_sale_date: readDate('ddate'),
+        p_goods: $('#dgoods').value, p_base_amount: Number($('#dbase').value), p_base_source: 'agent_invoice', p_evidence_ref: $('#devid').value,
+        p_declared_beta_total: total, p_declared_order_ref: latin($('#dref').value) || null}));
+      msg.innerHTML = `<p class="zero">معامله ${fmt(id)} ثبت شد و در انتظار تأیید الماس است.</p>`;
+      setTimeout(() => show('mydeals'), 900);
+    } catch (e) { msg.innerHTML = `<p class="err">${e.message}</p>`; }
+  };
+}
+function wirePay() {
+  if (!$('#psave')) return;
+  $('#psave').onclick = async () => {
+    const msg = $('#pmsg');
+    try {
+      const alloc = [...document.querySelectorAll('input[data-ent]')].map(i => ({entitlement_id: Number(i.dataset.ent), amount: Number(i.value)})).filter(a => a.amount > 0);
+      const amount = alloc.reduce((a, x) => a + x.amount, 0), method = $('#pmethod').value, ref = $('#pref').value.trim();
+      if (!amount) throw new Error('مبلغی برای پرداخت انتخاب نشده است.');
+      if (!ref) throw new Error(method === 'dornatel_wallet' ? 'شناسه تراکنش درناتل لازم است.' : 'مرجع پرداخت بانکی لازم است.');
+      const args = {p_agent: Number($('#psel').value), p_method: method, p_amount: amount, p_paid_at: readDate('pdate'), p_allocations: alloc};
+      if (method === 'bank_transfer') Object.assign(args, {p_bank_account: Number($('#pbank').value), p_bank_ref: ref});
+      else Object.assign(args, {p_dornatel_txn_ref: ref, p_wallet_account_ref: $('#pwallet').value.trim()});
+      await op('agent.settle', args);
+      msg.innerHTML = `<p class="zero">تسویه ${fmt(amount)} ریال ثبت شد.</p>`; setTimeout(() => show('agentpay'), 900);
+    } catch (e) { msg.innerHTML = `<p class="err">${e.message}</p>`; }
+  };
+}
+
 let current = 'inbox';
 async function show(tab) {
   current = tab;
   document.querySelectorAll('nav button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab));
+  window._keepSel = {}; document.querySelectorAll('#view select').forEach(i => { if (i.id) window._keepSel[i.id] = i.value; });
   if (!user) { $('#view').innerHTML = '<p class="muted">نام کاربری را وارد کنید.</p>'; return; }
   // keep what the user typed before the view is redrawn (report parameters)
-  window._keep = {}; document.querySelectorAll('#view input').forEach(i => { if (i.id) window._keep[i.id] = i.value; });
+  window._keep = {...window._keepSel}; document.querySelectorAll('#view input').forEach(i => { if (i.id) window._keep[i.id] = i.value; });
   $('#view').innerHTML = '<p class="muted">در حال بارگذاری…</p>';
-  try { $('#view').innerHTML = await views[tab](); } catch (e) { $('#view').innerHTML = `<p class="err">${e.message}</p>`; }
+  window._after = null;
+  try { $('#view').innerHTML = await views[tab](); if (window._after) window._after(); }   // wire a view only after its HTML is in place
+  catch (e) { $('#view').innerHTML = `<p class="err">${e.message}</p>`; }
 }
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.tab));
-$('#login').onclick = () => { user = $('#user').value.trim(); try { sessionStorage.setItem('almas_user', user); } catch (e) {} show(current); };
-show(current);
+function drawNav() {
+  const tabs = isAgent ? AGENT_TABS : CENTRAL_TABS;
+  if (!tabs.some(t => t[0] === current)) current = tabs[0][0];
+  $('#nav').innerHTML = tabs.map(([k, v]) => `<button role="tab" data-tab="${k}" aria-selected="${k === current}">${v}</button>`).join('');
+  document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.tab));
+}
+async function start() {
+  isAgent = false;
+  if (user) { try { isAgent = !(await api('/operations')).some(o => o.operation === 'controls.inbox'); } catch (e) {} }
+  drawNav(); show(current);
+}
+$('#login').onclick = () => { user = $('#user').value.trim(); try { sessionStorage.setItem('almas_user', user); } catch (e) {} start(); };
+start();
 </script>
 </body>
 </html>

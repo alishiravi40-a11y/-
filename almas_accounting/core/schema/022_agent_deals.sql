@@ -60,6 +60,8 @@ CREATE TABLE core.agent_deal (
   declared_by text NOT NULL, declared_at timestamptz NOT NULL DEFAULT now(),
   approved_by text, approved_at timestamptz, closed_by text, closed_at timestamptz, close_reason text, updated_at timestamptz);
 CREATE INDEX agent_deal_customer ON core.agent_deal (scheme_id, national_id);
+-- one panel reference belongs to one live deal (a second declaration of the same bank sale is refused, not left to review)
+CREATE UNIQUE INDEX agent_deal_order_ref ON core.agent_deal (scheme_id, declared_order_ref) WHERE declared_order_ref IS NOT NULL AND status IN ('declared', 'approved');
 COMMENT ON TABLE core.agent_deal IS 'an agent''s Beta sale: the agent''s goods and their base amount, which Almas owes the agent (D-22)';
 
 CREATE FUNCTION core.trg_agent_deal_rules() RETURNS trigger LANGUAGE plpgsql AS $$
@@ -257,6 +259,8 @@ BEGIN
     SELECT id INTO sch FROM core.beta_scheme WHERE status = 'active';
   END IF;
   IF NOT core.valid_national_id(nid) THEN RAISE EXCEPTION 'کد ملی خریدار معتبر نیست'; END IF;
+  SELECT id INTO did FROM core.agent_deal WHERE scheme_id = sch AND declared_order_ref = nullif(btrim(p_declared_order_ref), '') AND status IN ('declared', 'approved');
+  IF FOUND THEN RAISE EXCEPTION 'این فروش پنل قبلاً اعلام شده است (معامله %)', did; END IF;
   INSERT INTO core.agent_deal (agent_id, scheme_id, national_id, party_id, customer_name, sale_date, goods_description, base_amount, base_amount_source,
                                evidence_ref, declared_beta_total, declared_order_ref, declared_by)
   VALUES (ag, sch, nid, (SELECT id FROM core.party WHERE national_id = nid AND merged_into_id IS NULL), p_customer_name, p_sale_date, p_goods, p_base_amount,

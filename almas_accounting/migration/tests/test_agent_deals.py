@@ -215,3 +215,10 @@ def test_catalog_and_workspace(db):
     ops = dict(db.execute("SELECT operation, agent_allowed FROM core.operation_catalog WHERE operation LIKE 'agent.%'").fetchall())
     assert ops["agent.deal_declare"] and ops["agent.my_deals"] and not ops["agent.deal_approve"] and not ops["agent.settle"]
     assert db.execute("SELECT value FROM core.setting WHERE key = 'agent_share_rule'").fetchone()[0] == "base_goods_value"
+
+
+def test_the_same_bank_sale_cannot_be_declared_twice(env):
+    db = env["db"]
+    declare(db, ref="B-7")
+    with pytest.raises(Raised, match="قبلاً اعلام شده"):
+        declare(db, ref="B-7")

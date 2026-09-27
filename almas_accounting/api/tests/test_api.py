@@ -92,3 +92,32 @@ def test_agent_workspace_user_reaches_only_agent_operations(client, db):
     assert c.post("/operations/agent.my_cases", json={"args": {}}, headers=h("rep")).status_code == 200
     assert c.get("/schema", headers=h("rep")).status_code == 403
     assert all(o["operation"].startswith("agent.") for o in c.get("/operations", headers=h("rep")).json())
+
+
+def test_agent_screens_through_the_api(client, db):
+    """The agent declares a deal from its workspace; central staff see it, approve the base amount and read the agent report."""
+    from beta.common import make_national_id as nid
+    c, ids, p = client
+    db.execute("INSERT INTO core.app_user (username) VALUES ('boss'), ('rep')")
+    for perm in ("agent.manage", "agent.deal_approve", "agent.attribute", "agent.settle"):
+        db.execute("INSERT INTO core.user_permission (username, permission, granted_by) VALUES ('boss', %s, 't')", (perm,))
+    holder = db.execute("INSERT INTO core.party (name, national_id) VALUES ('holder', %s) RETURNING id", (nid("123456789"),)).fetchone()[0]
+    acc = db.execute("INSERT INTO core.company_bank_account (bank_code, account_no, title, holder_party_id) VALUES ('refah', '1', 's', %s) RETURNING id", (holder,)).fetchone()[0]
+    db.execute("INSERT INTO core.beta_scheme (code, title, holder_party_id, company_bank_account_id, created_by) VALUES ('S1', 's', %s, %s, 't')", (holder, acc))
+    a = db.execute("SELECT core.agent_create('A1', 'agent one', NULL, NULL, NULL, 'boss')").fetchone()[0]
+    db.execute("SELECT core.agent_bind_user('rep', %s, 'boss')", (a,))
+    r = c.post("/operations/agent.deal_declare", headers=h("rep"), json={"args": {
+        "p_national_id": nid("001234567"), "p_customer_name": "buyer", "p_sale_date": "2026-09-20", "p_goods": "tv",
+        "p_base_amount": 1000, "p_base_source": "agent_invoice", "p_evidence_ref": "inv 5"}})
+    assert r.status_code == 200, r.text
+    deal = r.json()["rows"][0]["agent_deal_declare"]
+    assert c.post("/operations/agents.deals_pending", headers=h("rep"), json={"args": {}}).status_code == 403     # central screen closed to the agent
+    pend = c.post("/operations/agents.deals_pending", headers=h("boss"), json={"args": {}}).json()["rows"]
+    assert [x["deal_id"] for x in pend] == [deal]
+    assert c.post("/operations/agent.deal_approve", headers=h("boss"), json={"args": {"p_deal": deal}}).status_code == 200
+    mine = c.post("/operations/agent.my_deals", headers=h("rep"), json={"args": {}}).json()["rows"]
+    assert mine[0]["owed"] == "1000" and mine[0]["status_fa"] == "تأییدشده"
+    rep = c.post("/operations/agents.report", headers=h("boss"), json={"args": {"p_agent": a}}).json()["rows"]
+    assert rep[0]["base_amount"] == "1000" and rep[0]["state_fa"] == "در بانک دیده نشده"
+    ov = c.post("/operations/agents.overview", headers=h("boss"), json={"args": {}}).json()["rows"]
+    assert ov[0]["owed_to_agent"] == "1000" and ov[0]["own_contracts_as_customer"] == 0
