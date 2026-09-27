@@ -1,0 +1,337 @@
+{
+ "started_at": "2026-09-27T11:34:34",
+ "source_db": "holoo1_1404",
+ "fiscal_year": "1404",
+ "01_ledger_migration": {
+  "result": {
+   "run": "f6ba0e0d57094e39927dc13f77f1b575",
+   "chart": {
+    "same_code_new": 835,
+    "person_control_new": 32705,
+    "dropped_unused_new": 24
+   },
+   "unchanged": 0,
+   "superseded": 0,
+   "removed_in_source": 0,
+   "skipped_no_visible_lines": 8,
+   "entries_created": 47439
+  },
+  "seconds": 177
+ },
+ "02_ledger_rerun_is_noop": {
+  "result": {
+   "run": "f6ba0e0d57094e39927dc13f77f1b575",
+   "chart": {},
+   "unchanged": 0,
+   "superseded": 0,
+   "removed_in_source": 0,
+   "skipped_no_visible_lines": 0,
+   "entries_created": 0
+  },
+  "seconds": 3
+ },
+ "03_ledger_parity_mirror": {
+  "result": {
+   "compared": 9956,
+   "mismatches": 0,
+   "holoo_totals": [
+    80719765143371.0,
+    80719765143371.0
+   ],
+   "core_totals": [
+    80719765143371.0,
+    80719765143371.0
+   ],
+   "status": "pass"
+  },
+  "seconds": 2
+ },
+ "04_cheque_migration": {
+  "result": {
+   "cheques": 12515,
+   "events": 35614,
+   "type:opening": 4476,
+   "type:settled_otherwise": 72,
+   "type:returned_to_payer": 719,
+   "type:deposited_for_collection": 10025,
+   "type:returned_from_bank": 755,
+   "type:moved_between_cashboxes": 1115,
+   "type:collected": 9106,
+   "type:paid_by_bank": 85,
+   "type:endorsed_to_party": 953,
+   "type:returned_by_endorsee": 479,
+   "type:received": 7749,
+   "type:issued": 80,
+   "chain_conflict": 2,
+   "conflict_examples": 2
+  },
+  "seconds": 367
+ },
+ "05_cheque_voucher_parity": {
+  "result": {
+   "by_voucher_type": {
+    "0": {
+     "vouchers": 3884,
+     "identical": 3884,
+     "examples": null
+    },
+    "4": {
+     "vouchers": 45,
+     "identical": 45,
+     "examples": null
+    },
+    "5": {
+     "vouchers": 16,
+     "identical": 16,
+     "examples": null
+    },
+    "7": {
+     "vouchers": 33,
+     "identical": 33,
+     "examples": null
+    },
+    "8": {
+     "vouchers": 2252,
+     "identical": 2251,
+     "examples": [
+      353040
+     ]
+    }
+   },
+   "vouchers": 6230,
+   "identical": 6229
+  },
+  "seconds": 9
+ },
+ "06_treasury_and_guarantee_parity": {
+  "result": {
+   "compared": {
+    "bank fee → bank_fee": {
+     "identical": 210
+    },
+    "bank fee → payment": {
+     "identical": 6
+    },
+    "bank fee → receipt": {
+     "identical": 1
+    },
+    "bank fee → transfer": {
+     "identical": 11
+    },
+    "bank transfer → bank_fee+transfer": {
+     "identical": 5
+    },
+    "bank transfer → transfer": {
+     "identical": 4729
+    },
+    "cash deposit → transfer": {
+     "identical": 1
+    },
+    "payment → payment": {
+     "identical": 272
+    },
+    "payment → receipt": {
+     "identical": 1
+    },
+    "receipt → guarantee": {
+     "identical": 138
+    },
+    "receipt → receipt": {
+     "identical": 2250
+    },
+    "receipt → receipt+transfer": {
+     "identical": 1
+    },
+    "receipt → transfer": {
+     "identical": 3
+    },
+    "0 → guarantee": {
+     "identical": 134
+    }
+   },
+   "not_a_treasury_shape": {},
+   "compound_vouchers_split": {
+    "bank transfer → bank_fee+transfer": 5,
+    "receipt → receipt+transfer": 1
+   },
+   "guarantees": {
+    "released 0010002": 132,
+    "taken 0010002": 138,
+    "released 0010001": 2
+   },
+   "fee_account_check": {
+    "fee on the bank's configured fee account": 302
+   },
+   "vouchers": 7762,
+   "identical": 7762
+  },
+  "seconds": 6
+ },
+ "07_receivables_allocation": {
+  "result": {
+   "sub_ledgers": 9640,
+   "settlements_created": 38763,
+   "seconds": 35
+  },
+  "seconds": 35
+ },
+ "08_receivables_rerun_is_noop": {
+  "result": {
+   "sub_ledgers": 9640,
+   "settlements_created": 0,
+   "seconds": 12
+  },
+  "seconds": 12
+ },
+ "09_aging_equals_ledger": {
+  "result": {
+   "month_ends": 12,
+   "sub_ledgers_with_difference": 0
+  },
+  "seconds": 5
+ },
+ "10_aging_summary": {
+  "result": {
+   "settlements_by_method": {
+    "legacy_fifo": 38763
+   },
+   "receivables_103_aging": {
+    "parties_with_open_debit": 253.0,
+    "parties_with_unapplied_credit": 48.0,
+    "not_due": 4464750000.0,
+    "d1_30": 52310142012.0,
+    "d31_60": 1862537524.0,
+    "d61_90": 6847343283.0,
+    "d91_180": 32433588656.0,
+    "d181_365": 11024766584.0,
+    "over_365": 0.0,
+    "open_debit": 108943128059.0,
+    "unapplied_credit": 24121763306.0,
+    "net": 84821364753.0
+   },
+   "debit_items_status_103": {
+    "open": 239,
+    "partial": 235,
+    "settled": 20719
+   }
+  },
+  "seconds": 0
+ },
+ "11_report_trial_balance": {
+  "result": {
+   "runs": 14,
+   "code_periods_compared": 93105,
+   "different": 0,
+   "difference_levels": []
+  },
+  "seconds": 4
+ },
+ "12_report_party_balance_function": {
+  "result": {
+   "function": "Calc_Mandeh_CustomerFuncDate",
+   "month_ends": 12,
+   "person_balances_compared": 392352,
+   "different": 0,
+   "holoo_persons_without_party": 0
+  },
+  "seconds": 5
+ },
+ "13_report_daily_ledgers": {
+  "result": {
+   "account_days_compared": 40426,
+   "accounts": 9955,
+   "bank_and_cash_accounts": 61,
+   "different_turnover": 0,
+   "different_end_of_day_balance": 0
+  },
+  "seconds": 1
+ },
+ "14_report_spMoienAshkhas": {
+  "result": {
+   "procedure": "spMoienAshkhas",
+   "accounts": 120,
+   "lines": 11107,
+   "same_lines": 120,
+   "same_end_of_day_balances": 120,
+   "same_final_balance": 120,
+   "same_line_order": 120
+  },
+  "seconds": 33
+ },
+ "15_report_cheque_states": {
+  "result": {
+   "holoo_cheques": 12515,
+   "core_cheques_with_events": 12307,
+   "compared": 12307,
+   "same_state": 12305,
+   "different": {
+    "received → endorsed_to_party": 2
+   },
+   "only_in_holoo": 208,
+   "holoo_state_distribution": {
+    "collected": 9106,
+    "received": 1094,
+    "returned_to_payer": 719,
+    "endorsed_to_party": 680,
+    "deposited_for_collection": 598,
+    "moved_between_cashboxes": 140,
+    "paid_by_bank": 85,
+    "settled_otherwise": 72,
+    "issued": 12,
+    "returned_from_bank": 7,
+    "returned_by_endorsee": 2
+   }
+  },
+  "seconds": 17
+ },
+ "16_inventory_migration": {
+  "result": {
+   "warehouses": 20,
+   "models": 1346,
+   "item_codes": 9607,
+   "openings": 163,
+   "movements": 47527
+  },
+  "seconds": 2
+ },
+ "17_inventory_parity": {
+  "result": {
+   "item_codes": 9596,
+   "stock_qty_equal": 9596,
+   "out_lines": 33571,
+   "out_lines_cost_equal": 30829,
+   "item_codes_in_stock": 211,
+   "avg_cost_equal": 194,
+   "holoo_goods_value_exist_x_buy_price": 466205780506.7963,
+   "core_valuation": 466220534754.21,
+   "valuation_difference": 14754247.41,
+   "negative_stock_legacy_item_warehouses": 169
+  },
+  "seconds": 14
+ },
+ "18_year_end_closing_parity": {
+  "result": {
+   "ending_inventory_input": 466205850507.0,
+   "core_inventory_valuation": 466220534754.0,
+   "core_minus_holoo_input": 14684247.0,
+   "temporary": {
+    "account_party_pairs": 62,
+    "different": 0,
+    "holoo_total_debit": 24381286182358.0,
+    "core_total_debit": 8342566864772.0
+   },
+   "permanent": {
+    "account_party_pairs": 571,
+    "different": 0,
+    "holoo_total_debit": 5114761732810.0,
+    "core_total_debit": 5114761732810.0
+   },
+   "closing_balance_account_lines": {
+    "holoo": 2,
+    "core": 2
+   }
+  },
+  "seconds": 5
+ },
+ "finished_at": "2026-09-27T11:46:12"
+}
