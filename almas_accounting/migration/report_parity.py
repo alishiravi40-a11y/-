@@ -179,10 +179,14 @@ def cheque_states(pg, sql, db):
         """SELECT c.holoo_check_code, l.last_event, (SELECT e.state FROM core.cheque_event e WHERE e.cheque_id = l.cheque_id AND e.event_type IS NOT NULL
                    ORDER BY e.effective_date DESC, e.id DESC LIMIT 1)
            FROM core.cheque_location l JOIN core.cheque c ON c.id = l.cheque_id WHERE c.legacy_source_db = %s""", (db,)).fetchall()}
+    closed = dict(pg.execute("""SELECT holoo_check_code, closed_before_migration FROM core.cheque
+                                WHERE legacy_source_db = %s AND closed_before_migration IS NOT NULL""", (db,)).fetchall())
+    core.update({k: v for k, v in closed.items() if k not in core})
     both = set(holoo) & set(core)
     same = sum(1 for k in both if holoo[k] == core[k])
     diff = collections.Counter((holoo[k], core[k]) for k in both if holoo[k] != core[k])
-    return {"holoo_cheques": len(holoo), "core_cheques_with_events": len(core), "compared": len(both), "same_state": same,
+    return {"holoo_cheques": len(holoo), "core_cheques_with_status": len(core), "of_which_closed_before_migration": len(closed),
+            "compared": len(both), "same_state": same,
             "different": {f"{a} → {b}": n for (a, b), n in diff.most_common(8)}, "only_in_holoo": len(set(holoo) - set(core)),
             "holoo_state_distribution": dict(collections.Counter(holoo.values()).most_common())}
 

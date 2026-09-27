@@ -27,7 +27,7 @@ def step(results: dict, name: str, fn):
 
 
 def main():
-    from migration import (holoo_cheques, holoo_inventory, holoo_ledger, receivables, report_parity, treasury_parity,
+    from migration import (holoo_cheques, holoo_inventory, holoo_ledger, holoo_tax, receivables, report_parity, treasury_parity,
                            year_end_parity)
     ap = argparse.ArgumentParser()
     for a in ("--pg", "--source-db", "--sql-db", "--year", "--out"):
@@ -68,6 +68,8 @@ def main():
         step(r, "16_inventory_migration", lambda: holoo_inventory.migrate(pg, a.source_db))
         step(r, "17_inventory_parity", lambda: holoo_inventory.parity(pg, a.source_db, ye))
         step(r, "18_year_end_closing_parity", lambda: year_end_parity.run(pg, a.source_db, a.year))
+        step(r, "19_tax_submission_migration", lambda: holoo_tax.migrate(pg, a.source_db))
+        step(r, "20_tax_status_parity_and_controls", lambda: holoo_tax.parity(pg, a.source_db))
     r["finished_at"] = dt.datetime.now().isoformat(timespec="seconds")
     with open(a.out, "w", encoding="utf-8") as f:
         json.dump(r, f, ensure_ascii=False, indent=1, default=str)

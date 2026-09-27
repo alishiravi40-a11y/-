@@ -214,3 +214,15 @@ def test_derive_rebuilds_the_implicit_cheque_locations(db):
                    5: ("endorsed_to_party", "10400010001", "40101760002"), 6: ("issued", "4020001", "40101760002"),
                    7: ("paid_by_bank", "10200010001", "4020001"), 8: ("received", "10300080001", "10400010001"),
                    9: ("endorsed_to_party", "10400010001", "1070009")}
+
+
+def test_every_cheque_has_a_status(db, t):
+    ids, p = t
+    live = cheque(db, ids, p)
+    event(db, live, "received", ids["1030008"], p, ids["10400010001"], None)
+    old = cheque(db, ids, p, amount=70)
+    db.execute("UPDATE core.cheque SET closed_before_migration = 'endorsed_to_party' WHERE id = %s", (old,))
+    orphan = cheque(db, ids, p, amount=90)
+    st = {r[0]: (r[1], r[2]) for r in db.execute("SELECT cheque_id, kind, state FROM core.cheque_status")}
+    assert st[live] == ("tracked", "received") and st[old] == ("closed_before_migration", "endorsed_to_party")
+    assert st[orphan] == ("no_event", None)                                  # visible, never silently missing

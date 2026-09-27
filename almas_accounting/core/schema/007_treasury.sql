@@ -68,6 +68,19 @@ FROM core.cheque c JOIN core.cheque_event e ON e.cheque_id = c.id AND e.event_ty
  AND NOT EXISTS (SELECT 1 FROM core.cheque_event r WHERE r.reverses_event_id = e.id)
 ORDER BY c.id, e.effective_date DESC, e.id DESC;
 
+-- A cheque whose life ended in an earlier year that is not in this database (Holoo carries such cheques into the new
+-- year only as a closed record inside the opening voucher, state V, with no balance — 208 in 1404) has no events here;
+-- its final state is kept explicitly instead of leaving it without a status.
+ALTER TABLE core.cheque ADD COLUMN closed_before_migration text
+  CHECK (closed_before_migration IN ('collected', 'endorsed_to_party', 'paid_by_bank', 'settled_otherwise'));
+
+-- the status of EVERY cheque: its location, or its final state before migration
+CREATE VIEW core.cheque_status AS
+SELECT c.id AS cheque_id, c.direction, c.amount, c.due_date,
+       CASE WHEN l.cheque_id IS NOT NULL THEN 'tracked' WHEN c.closed_before_migration IS NOT NULL THEN 'closed_before_migration' ELSE 'no_event' END AS kind,
+       coalesce(l.last_event, c.closed_before_migration) AS state, l.since, l.account_id, l.party_id
+FROM core.cheque c LEFT JOIN core.cheque_location l ON l.cheque_id = c.id;
+
 -- post a set of cheque events as one journal entry (a Holoo voucher can hold many cheques)
 CREATE FUNCTION core.post_cheque_events(p_events bigint[], p_date date, p_source_ref text, p_user text) RETURNS bigint LANGUAGE plpgsql AS $$
 DECLARE eid bigint; per core.period;

@@ -209,6 +209,18 @@ def migrate(conn, db: str, user: str = "holoo-migration") -> dict:
                 continue
             stats["events"] += 1
             stats["type:" + t] += 1
+        # cheques whose only Holoo record in this year is a closed state (V) inside the opening voucher: closed in a
+        # previous year, no position here — keep their final state explicitly (208 in 1404)
+        stats["closed_before_migration"] = conn.execute("""
+            UPDATE core.cheque k SET closed_before_migration = x.st FROM (
+              SELECT e.check_code, CASE WHEN c.direction = 'out' THEN 'paid_by_bank'
+                                        WHEN coalesce(max(e.account_code), '') IN ('', '00000') THEN 'collected' ELSE 'endorsed_to_party' END st
+              FROM holoo_mirror.cheque_event e JOIN holoo_mirror.cheque c ON c.source_db = e.source_db AND c.check_code = e.check_code
+              JOIN holoo_mirror.voucher v ON v.source_db = e.source_db AND v.sanad_code = e.voucher_code
+              WHERE e.source_db = %s AND e.removed_run IS NULL GROUP BY e.check_code, c.direction
+              HAVING bool_and(v.state = 'opening') AND bool_and(e.state = 'V')) x
+            WHERE k.legacy_source_db = %s AND k.holoo_check_code = x.check_code AND k.closed_before_migration IS NULL
+              AND NOT EXISTS (SELECT 1 FROM core.cheque_event ev WHERE ev.cheque_id = k.id)""", (db, db)).rowcount
     out = dict(stats); out['conflict_examples'] = conflicts[:15]
     return out
 
