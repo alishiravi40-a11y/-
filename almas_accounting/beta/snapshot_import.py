@@ -26,6 +26,8 @@ COLS = {"id": "شناسه", "reg_date": "تاریخ ثبت", "reg_time": "زما
         "last": "نام خانوادگی مشتری", "account": "شماره حساب", "total": "مبلغ کل اعتباری", "first_due": "تاریخ اولین قسط",
         "first_amount": "مبلغ اولین قسط", "count": "اقساط", "collected": "اقساط وصولی", "overdue": "اقساط سررسید",
         "deleted": "اقساط حذف شده", "collected_amount": "مبلغ اقساط وصولی"}
+# who registered the sale in the bank panel (E28): optional, older exports may lack them
+OPTIONAL = {"registrar_nc": "کدملی ثبت کننده", "registrar_name": "ثبت کننده", "agency": "نمایندگی"}
 
 
 def jdate(s) -> dt.date:
@@ -38,6 +40,7 @@ def read_xlsx(path: str) -> list[dict]:
     it = ws.iter_rows(values_only=True)
     hdr = [norm(h) for h in next(it)]
     idx = {k: hdr.index(v) for k, v in COLS.items()}
+    idx.update({k: hdr.index(v) for k, v in OPTIONAL.items() if v in hdr})
     out = []
     for r in it:
         if r[idx["id"]] is None:
@@ -50,7 +53,9 @@ def read_xlsx(path: str) -> list[dict]:
                     "total": amount(g["total"]), "count": int(amount(g["count"])), "first_due": norm(g["first_due"]),
                     "first_amount": amount(g["first_amount"]), "collected": int(amount(g["collected"])),
                     "overdue": int(amount(g["overdue"])), "deleted": int(amount(g["deleted"])),
-                    "collected_amount": amount(g["collected_amount"])})
+                    "collected_amount": amount(g["collected_amount"]),
+                    "registrar_nc": national_code(g.get("registrar_nc")), "registrar_name": norm(g.get("registrar_name")) or None,
+                    "agency": norm(g.get("agency")) or None})
     return out
 
 
@@ -89,10 +94,12 @@ def import_rows(conn, rows: list[dict], sha: str, file_name: str, scheme_id: int
         for r in rows:
             h = hashlib.sha256(json.dumps(r, default=str, sort_keys=True).encode()).hexdigest()
             conn.execute("""INSERT INTO core.beta_contract_snapshot (file_id, bank_contract_id, national_code, registered_at, total_amount, installment_count,
-                            first_due_date, first_installment_amount, collected_count, collected_amount, overdue_count, cancelled_count, customer_account_no, row_hash)
-                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                            first_due_date, first_installment_amount, collected_count, collected_amount, overdue_count, cancelled_count, customer_account_no, row_hash,
+                            registrar_national_id, registrar_name, agency)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                          (fid, r["bank_contract_id"], r["nc"] or "", r["registered_at"], r["total"], r["count"], jdate(r["first_due"]),
-                          r["first_amount"], r["collected"], r["collected_amount"], r["overdue"], r["deleted"], r["account"], h))
+                          r["first_amount"], r["collected"], r["collected_amount"], r["overdue"], r["deleted"], r["account"], h,
+                          r.get("registrar_nc"), r.get("registrar_name"), r.get("agency")))
             pid = _party(conn, r, user, stats)
             c = conn.execute("""SELECT id, total_amount, installment_count, first_due_date FROM core.installment_contract
                                 WHERE scheme_id = %s AND bank_contract_id = %s""", (scheme_id, r["bank_contract_id"])).fetchone()

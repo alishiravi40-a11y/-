@@ -8,8 +8,7 @@ import pytest
 ROOT = pathlib.Path(__file__).parents[2]
 sys.path.insert(0, str(ROOT))
 DSN = os.environ.get("HOLOO_PG_TEST_DSN")
-SCHEMA = "\n".join((ROOT / "core" / "schema" / f).read_text(encoding="utf-8")
-                   for f in ("001_core.sql", "002_decisions.sql", "003_below_cost_alerts.sql", "004_beta.sql"))
+SCHEMA = "\n".join(f.read_text(encoding="utf-8") for f in sorted((ROOT / "core" / "schema").glob("0*.sql")))   # the whole core
 ALL_PERMS = ["security.admin", "settings.change", "party.merge", "beta.scheme_manage", "beta.contract_manage", "beta.capacity_override",
              "beta.receipt_manage", "beta.refund", "beta.credit_reallocate", "beta.review"]
 

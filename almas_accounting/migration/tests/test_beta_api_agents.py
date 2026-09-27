@@ -313,12 +313,11 @@ def test_agent_entitlement_and_settlement(env):
     iid = db.execute("SELECT id FROM core.installment WHERE contract_id = %s AND seq = 1", (cid,)).fetchone()[0]
     rc = db.execute("SELECT core.record_receipt('bank_collection', 1000000, current_date, %s, NULL, NULL, NULL, 'admin')", (env["account"],)).fetchone()[0]
     db.execute("SELECT core.apply_receipt(%s, %s, 'admin')", (rc, iid))
-    assert inbox(db)["AG-01"][0] == 1                                                    # collected, no entitlement recorded (D-22)
     with pytest.raises(Raised, match="not owned"):
         db.execute("SELECT core.agent_record_entitlement(%s, %s, 'sale', 50000, 'agreement A2', 'admin')", (env["a2"], cid))
     e = db.execute("SELECT core.agent_record_entitlement(%s, %s, 'collection', 80000, 'agreement A1 #3 (manual, D-22 open)', 'admin', %s, %s)",
                    (env["a1"], cid, iid, rc)).fetchone()[0]
-    assert inbox(db)["AG-01"][0] == 0 and inbox(db)["AG-02"] == (1, 80_000)
+    assert inbox(db)["AG-02"] == (1, 80_000)
     with pytest.raises(Raised, match="only 80000"):
         db.execute("SELECT core.agent_record_settlement(%s, 90000, current_date, 'transfer', %s, NULL, 'T1', %s, 'admin')",
                    (env["a1"], env["account"], Jsonb([{"entitlement_id": e, "amount": 90000}])))

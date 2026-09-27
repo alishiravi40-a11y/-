@@ -825,12 +825,8 @@ RETURNS TABLE (area text, control text, severity text, title text, items bigint,
   SELECT 'beta', 'BA-13', 'high', 'پاسخ بتا که قابل خواندن نبود (قالب پاسخ با سند ۱.۳ فرق دارد؟)', count(*), NULL::numeric, 'BETA_API, D-23'
   FROM core.beta_ingest_error
   UNION ALL
-  SELECT 'agents', 'AG-01', 'info', 'قسط وصول‌شده فروش نماینده بدون سهم ثبت‌شده (قاعده سهم: D-22)', count(*), coalesce(sum(s.paid_by_bank + s.paid_direct), 0), 'D-22'
-  FROM core.installment_status_at(p_as_of) s JOIN core.contract_owner ow ON ow.contract_id = s.contract_id AND ow.agent_id IS NOT NULL
-  WHERE s.status LIKE 'paid%' AND NOT EXISTS (SELECT 1 FROM core.agent_entitlement e WHERE e.contract_id = s.contract_id AND e.reversed_at IS NULL
-                                                AND (e.installment_id = s.installment_id OR e.basis = 'sale'))
-  UNION ALL
-  SELECT 'agents', 'AG-02', 'medium', 'سهم نماینده ثبت‌شده و هنوز تسویه‌نشده', count(*), coalesce(sum(open_amount), 0), 'D-22'
+  -- (AG-01 is defined in 022: after D-22 the agent is owed the deal's base amount, not a share of each collection)
+  SELECT 'agents', 'AG-02', 'medium', 'طلب ثبت‌شده نماینده که هنوز تسویه نشده', count(*), coalesce(sum(open_amount), 0), 'D-22'
   FROM core.agent_entitlement_status WHERE reversed_at IS NULL AND open_amount > 0
   UNION ALL
   SELECT 'agents', 'AG-03', 'high', 'سهم نماینده بر پایه وصولی که ابطال شده است', count(*), coalesce(sum(e.amount), 0), 'D-22'
@@ -843,7 +839,7 @@ RETURNS TABLE (area text, control text, severity text, title text, items bigint,
   FROM core.agent_settlement_allocation a JOIN core.agent_settlement s ON s.id = a.settlement_id AND s.reversed_at IS NULL
   JOIN core.agent_entitlement e ON e.id = a.entitlement_id AND e.reversed_at IS NOT NULL
   UNION ALL
-  SELECT 'agents', 'AG-06', 'info', 'رویداد نمایندگی بدون سند حسابداری (در انتظار D-22)', count(*), coalesce(sum(amount), 0), 'D-22'
+  SELECT 'agents', 'AG-06', 'info', 'رویداد نمایندگی بدون سند حسابداری (در انتظار D-26)', count(*), coalesce(sum(amount), 0), 'D-26'
   FROM (SELECT amount FROM core.agent_entitlement WHERE reversed_at IS NULL AND journal_entry_id IS NULL
         UNION ALL SELECT amount FROM core.agent_settlement WHERE reversed_at IS NULL AND journal_entry_id IS NULL) z $$;
 
