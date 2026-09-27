@@ -70,3 +70,12 @@ def test_reads_return_exact_amounts(client):
     r = c.post("/operations/ar.aging", json={"args": {"p_as_of": "2026-05-01"}}, headers=h("viewer")).json()
     row = r["rows"][0]
     assert row["open_debit"] == "1000" and row["unapplied_credit"] == "1000"                        # strings, never floats
+
+
+def test_ui_is_served_and_the_inbox_is_an_operation(client):
+    c, ids, p = client
+    assert c.get("/", follow_redirects=False).status_code in (302, 307)
+    page = c.get("/ui/")
+    assert page.status_code == 200 and 'dir="rtl"' in page.text and "controls.inbox" in page.text
+    rows = c.post("/operations/controls.inbox", json={"args": {"p_as_of": "2026-08-01"}}, headers=h("viewer")).json()["rows"]
+    assert {r["area"] for r in rows} >= {"receivables", "tax", "cheques"}

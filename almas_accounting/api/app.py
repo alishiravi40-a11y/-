@@ -20,10 +20,19 @@ import os
 
 import psycopg
 from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 ACTOR_PARAMS = {"p_user", "p_by", "p_created_by"}
-app = FastAPI(title="Almas Shahr accounting API", version="0.1.0")
+app = FastAPI(title="Almas Shahr accounting API", version="0.2.0")
+# the web UI is a static page that uses nothing but this API (no logic of its own)
+app.mount("/ui", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static"), html=True), name="ui")
+
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse("/ui/")
 
 
 def dsn() -> str:
