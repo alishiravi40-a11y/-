@@ -16,7 +16,7 @@ nav button[aria-selected=true]{background:var(--accent);color:#fff;border-color:
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th{color:var(--muted);font-weight:600}td.num{direction:ltr;text-align:left}
 .sev{font-weight:700}.sev.high{color:var(--high)}.sev.medium{color:var(--medium)}.sev.low{color:var(--low)}.zero{color:var(--ok)}
-label{color:var(--muted);font-size:13px}input{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+label{color:var(--muted);font-size:13px}select,input{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:10px}.muted{color:var(--muted)}.err{color:var(--high)}
 </style>
 </head>
@@ -29,7 +29,9 @@ label{color:var(--muted);font-size:13px}input{font:inherit;padding:6px 8px;borde
   <nav role="tablist">
     <button role="tab" data-tab="inbox" aria-selected="true">کارتابل کنترل‌ها</button>
     <button role="tab" data-tab="tb" aria-selected="false">تراز چهارستونی</button>
-    <button role="tab" data-tab="aging" aria-selected="false">سن‌بندی مطالبات</button>
+    <button role="tab" data-tab="aging" aria-selected="false">سن‌بندی حساب اشخاص</button>
+    <button role="tab" data-tab="sale" aria-selected="false">فاکتور فروش</button>
+    <button role="tab" data-tab="receipt" aria-selected="false">دریافت وجه</button>
     <button role="tab" data-tab="ops" aria-selected="false">عملیات مجاز من</button>
   </nav>
   <section id="view"><p class="muted">نام کاربری را وارد کنید.</p></section>
@@ -37,6 +39,10 @@ label{color:var(--muted);font-size:13px}input{font:inherit;padding:6px 8px;borde
 <script>
 const $ = s => document.querySelector(s);
 const AREA = {sales:'فروش', receivables:'مطالبات', cheques:'چک', inventory:'موجودی', tax:'مؤدیان', beta:'اقساط بتا', ledger:'دفتر'};
+const TEXT_COLS = new Set(['code', 'account_code', 'control', 'operation', 'basis', 'function_signature']);
+const DATE_COLS = new Set(['oldest_open_due', 'since', 'effective_date', 'invoice_date', 'due_date']);
+// dates are stored in the standard calendar and SHOWN in the Jalali calendar (browser Intl, no library)
+const jdate = iso => { try { return new Date(iso + 'T12:00:00').toLocaleDateString('fa-IR-u-ca-persian', {year: 'numeric', month: '2-digit', day: '2-digit'}); } catch (e) { return iso; } };
 const fmt = v => v === null || v === undefined ? '—' : (/^-?\d+(\.\d+)?$/.test(String(v)) ? Number(v).toLocaleString('fa-IR') : v);
 let user = ''; try { user = sessionStorage.getItem('almas_user') || ''; } catch (e) {}
 $('#user').value = user;
@@ -51,6 +57,8 @@ function table(rows, cols) {
   return '<table><thead><tr>' + cols.map(c => `<th>${c[1]}</th>`).join('') + '</tr></thead><tbody>' +
     rows.map(r => '<tr>' + cols.map(c => { const v = r[c[0]]; const n = /^-?\d/.test(String(v));
       if (c[0] === 'area') return `<td>${AREA[v] || v}</td>`;
+      if (TEXT_COLS.has(c[0])) return `<td>${v ?? '—'}</td>`;                     // codes are not amounts
+      if (DATE_COLS.has(c[0])) return `<td>${v ? jdate(String(v).slice(0, 10)) : '—'}</td>`;
       return c[0] === 'severity' ? `<td class="sev ${v}">${{high:'زیاد',medium:'متوسط',low:'کم'}[v] || v}</td>`
                                  : `<td class="${n ? 'num' : ''}">${fmt(v)}</td>`; }).join('') + '</tr>').join('') + '</tbody></table>';
 }
@@ -74,9 +82,36 @@ const views = {
       ['period_credit','گردش بستانکار'],['closing_debit','مانده بدهکار'],['closing_credit','مانده بستانکار']]) + '</div>';
   },
   async aging() {
-    const rows = (await op('ar.aging', {p_as_of: today})).filter(r => Number(r.net) !== 0).sort((a, b) => Number(b.net) - Number(a.net)).slice(0, 200);
-    return '<div class="card">' + table(rows, [['party_id','شخص'],['not_due','سررسیدنشده'],['d1_30','۱–۳۰'],['d31_60','۳۱–۶۰'],['d61_90','۶۱–۹۰'],
-      ['d91_180','۹۱–۱۸۰'],['d181_365','۱۸۱–۳۶۵'],['over_365','بیش از ۳۶۵'],['unapplied_credit','بستانکار تخصیص‌نیافته'],['net','خالص']]) + '</div>';
+    const rows = (await op('ar.aging_report', {p_as_of: today})).slice(0, 300);
+    return '<div class="card">' + table(rows, [['party_name','شخص'],['account_code','حساب'],['not_due','سررسیدنشده'],['overdue_1_90','۱ تا ۹۰ روز گذشته'],
+      ['overdue_over_90','بیش از ۹۰ روز'],['unapplied_credit','بستانکار تخصیص‌نیافته'],['net','خالص'],['oldest_open_due','قدیمی‌ترین سررسید']]) + '</div>';
+  },
+  async sale() {
+    const [wh, cash] = await Promise.all([op('warehouses.list', {}), op('money_accounts.list', {})]);
+    setTimeout(() => wireSale(wh), 0);
+    return `<div class="card"><div class="row">
+        <label>تاریخ <input id="sdate" type="date" value="${today}"></label>
+        <label>مشتری <input id="sparty" list="plist" placeholder="نام، کد ملی یا موبایل" size="28"></label><datalist id="plist"></datalist></div>
+      <div class="row"><label>کالا <input id="sitem" list="ilist" size="24"></label><datalist id="ilist"></datalist>
+        <label>انبار <select id="swh">${wh.map(w => `<option value="${w.warehouse_id}">${w.name}</option>`).join('')}</select></label>
+        <label>تعداد <input id="sqty" type="number" min="1" value="1" style="width:80px"></label>
+        <label>قیمت واحد (ریال) <input id="sprice" type="number" min="0" style="width:140px"></label>
+        <button class="btn" id="sadd">افزودن ردیف</button></div>
+      <div id="slines"></div>
+      <div class="row"><label>دریافت نقد/کارت (ریال) <input id="spaid" type="number" min="0" value="0" style="width:140px"></label>
+        <label>به <select id="scash">${cash.map(a => `<option value="${a.account_id}">${a.name}</option>`).join('')}</select></label>
+        <button class="btn" id="ssave" style="background:var(--accent);color:#fff">ثبت نهایی فاکتور</button></div>
+      <div id="smsg"></div></div>`;
+  },
+  async receipt() {
+    const cash = await op('money_accounts.list', {});
+    setTimeout(wireReceipt, 0);
+    return `<div class="card"><div class="row">
+        <label>تاریخ <input id="rdate" type="date" value="${today}"></label>
+        <label>از شخص <input id="rparty" list="plist" size="28"></label><datalist id="plist"></datalist>
+        <label>مبلغ (ریال) <input id="ramount" type="number" min="1" style="width:160px"></label>
+        <label>به <select id="rcash">${cash.map(a => `<option value="${a.account_id}">${a.name}</option>`).join('')}</select></label>
+        <button class="btn" id="rsave" style="background:var(--accent);color:#fff">ثبت دریافت</button></div><div id="rmsg"></div></div>`;
   },
   async ops() {
     const rows = await api('/operations');
@@ -84,6 +119,57 @@ const views = {
       [['operation','عملیات'],['kind','نوع'],['purpose','هدف'],['permitted','مجاز'],['undo','راه برگشت'],['basis','پشتوانه']]) + '</div>';
   }
 };
+// ---- forms: every step is a catalogued operation; the page holds no rule of its own ----
+const picked = {};
+function lookup(inputId, listId, opName, key, label) {
+  const inp = $('#' + inputId);
+  inp.oninput = async () => {
+    const q = inp.value.trim(); if (q.length < 2) return;
+    const rows = await op(opName, {p_query: q});
+    $('#' + listId).innerHTML = rows.map(r => `<option value="${r[label]}">`).join('');
+    const hit = rows.find(r => r[label] === q); picked[inputId] = hit ? hit[key] : null;
+  };
+}
+function wireSale() {
+  const lines = [];
+  lookup('sparty', 'plist', 'parties.find', 'party_id', 'name'); lookup('sitem', 'ilist', 'items.find', 'item_id', 'name');
+  const draw = () => $('#slines').innerHTML = lines.length ? table(lines.map((l, i) => ({...l, n: i + 1, total: l.quantity * l.unit_price})),
+      [['n','ردیف'],['name','کالا'],['quantity','تعداد'],['unit_price','قیمت واحد'],['total','جمع']]) : '';
+  $('#sadd').onclick = () => {
+    if (!picked.sitem) return $('#smsg').innerHTML = '<p class="err">کالا را از فهرست انتخاب کنید.</p>';
+    lines.push({item_id: picked.sitem, name: $('#sitem').value, warehouse_id: Number($('#swh').value),
+                quantity: Number($('#sqty').value), unit_price: Number($('#sprice').value)}); draw();
+  };
+  $('#ssave').onclick = async () => {
+    const msg = $('#smsg');
+    if (!picked.sparty || !lines.length) return msg.innerHTML = '<p class="err">مشتری و دست‌کم یک ردیف لازم است.</p>';
+    try {
+      const paid = Number($('#spaid').value);
+      const pay = paid > 0 ? [{method: 'cash', account_id: Number($('#scash').value), amount: paid}] : [];
+      const id = Object.values((await op('sales.create', {p_date: $('#sdate').value, p_party: picked.sparty,
+                   p_lines: lines.map(({item_id, warehouse_id, quantity, unit_price}) => ({item_id, warehouse_id, quantity, unit_price})), p_payments: pay}))[0])[0];
+      try { await op('sales.finalize', {p_invoice: id}); }
+      catch (e) {
+        if (!/below/.test(e.message)) throw e;
+        const reason = prompt('فروش زیر قیمت خرید است. در صورت تأیید، علت را بنویسید:');
+        if (!reason) throw new Error('فاکتور به‌صورت پیش‌نویس ماند (فروش زیر قیمت خرید تأیید نشد).');
+        await op('sales.finalize', {p_invoice: id, p_acknowledge_below_cost: true, p_below_cost_reason: reason});
+      }
+      msg.innerHTML = `<p class="zero">فاکتور ${fmt(id)} ثبت نهایی شد (سند حسابداری و خروج کالا).</p>`; lines.length = 0; draw();
+    } catch (e) { msg.innerHTML = `<p class="err">${e.message}</p>`; }
+  };
+}
+function wireReceipt() {
+  lookup('rparty', 'plist', 'parties.find', 'party_id', 'name');
+  $('#rsave').onclick = async () => {
+    const msg = $('#rmsg');
+    if (!picked.rparty) return msg.innerHTML = '<p class="err">شخص را از فهرست انتخاب کنید.</p>';
+    try {
+      await op('treasury.receive', {p_party: picked.rparty, p_money_account: Number($('#rcash').value), p_amount: Number($('#ramount').value), p_date: $('#rdate').value});
+      msg.innerHTML = '<p class="zero">دریافت ثبت شد.</p>';
+    } catch (e) { msg.innerHTML = `<p class="err">${e.message}</p>`; }
+  };
+}
 let current = 'inbox';
 async function show(tab) {
   current = tab;
@@ -93,6 +179,11 @@ async function show(tab) {
   try { $('#view').innerHTML = await views[tab](); } catch (e) { $('#view').innerHTML = `<p class="err">${e.message}</p>`; }
 }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.tab));
+// every date input shows its Jalali date next to it
+new MutationObserver(() => document.querySelectorAll('input[type=date]:not([data-j])').forEach(i => {
+  i.dataset.j = 1; const h = document.createElement('span'); h.className = 'muted'; h.style.marginInlineStart = '6px';
+  const upd = () => h.textContent = i.value ? jdate(i.value) : ''; i.addEventListener('change', upd); i.after(h); upd();
+})).observe(document.body, {childList: true, subtree: true});
 $('#login').onclick = () => { user = $('#user').value.trim(); try { sessionStorage.setItem('almas_user', user); } catch (e) {} show(current); };
 show(current);
 </script>

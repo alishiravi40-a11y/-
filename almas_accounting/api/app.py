@@ -19,6 +19,7 @@ import json
 import os
 
 import psycopg
+from psycopg.types.json import Jsonb
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -92,7 +93,8 @@ class Call(BaseModel):
 
 @app.post("/operations/{operation}")
 def call(operation: str, body: Call, user: str = Depends(authenticate)):
-    with psycopg.connect(dsn()) as c:
+    # autocommit: the transaction below is the real one, so deferred checks (e.g. negative stock) fire inside it
+    with psycopg.connect(dsn(), autocommit=True) as c:
         op = c.execute("""SELECT kind, function_signature FROM core.operation_catalog WHERE operation = %s""", (operation,)).fetchone()
         if not op:
             raise HTTPException(404, f"unknown operation {operation}")
@@ -105,7 +107,7 @@ def call(operation: str, body: Call, user: str = Depends(authenticate)):
             raise HTTPException(422, f"unknown argument(s) {sorted(bad)}; expected {argnames}")
         if set(body.args) & ACTOR_PARAMS:
             raise HTTPException(422, "the acting user is set by the API, not by the caller")
-        args = dict(body.args)
+        args = {k: (Jsonb(v) if isinstance(v, (dict, list)) else v) for k, v in body.args.items()}   # JSON → jsonb
         for a in argnames:
             if a in ACTOR_PARAMS:
                 args[a] = user
