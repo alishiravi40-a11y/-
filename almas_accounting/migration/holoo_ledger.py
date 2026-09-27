@@ -114,6 +114,9 @@ def migrate(conn, source_db: str, fiscal_year: str, run_id: str | None = None) -
         stats["parties"] = legacy.map_persons(conn, source_db, run)
         fid = ensure_fiscal_year(conn, fiscal_year)
         stats["chart"] = build_chart(conn, source_db, run)
+        # the map was just filled in this transaction: without fresh statistics the planner joins 190k lines × 33k
+        # codes by nested loop (≈9 minutes on 1404); with them, a hash join (seconds)
+        conn.execute("ANALYZE core.legacy_account_map")
         conn.execute("DROP TABLE IF EXISTS pg_temp.vl, pg_temp.vh, pg_temp.newv")
         conn.execute("""CREATE TEMP TABLE vl AS
             SELECT l.sanad_code, row_number() OVER (PARTITION BY l.sanad_code ORDER BY l.line_index) line_no, l.line_index,

@@ -91,7 +91,9 @@ def build_silver(bronze_dir: str, silver_path: str, meta: dict) -> dict:
             {_case('Fac_Type', A.DOC_KINDS, 1, "'نامشخص'")}, CAST(Fac_Date AS DATE), jdate(CAST(Fac_Date AS DATE)), C_Code,
             coalesce(Sum_Price,0), coalesce(FNaghd,0), coalesce(Card,0), coalesce(FCheck,0), coalesce(FNesieh,0), coalesce(Takhfif,0),
             NULLIF(Sanad_Code,0), UserCode, CASE WHEN UserCode = {A.WEB_SERVICE_USER} THEN 'web_service' ELSE 'holoo_ui' END,
-            order_no(Fac_Comment), StateTax, NULLIF(FTaxId,''), TRY_CAST(replace(DateUser,'/','-') AS DATE), clean(Fac_Comment), _row_hash FROM {{FACTURE}}""", "FACTURE")
+            order_no(Fac_Comment), StateTax, NULLIF(FTaxId,''), TRY_CAST(replace(DateUser,'/','-') AS DATE), clean(Fac_Comment),
+            {"strftime(Fac_Time, '%H:%M:%S')" if has("FACTURE", "Fac_Time") else "NULL"}, {"coalesce(HazFactK,0)" if has("FACTURE", "HazFactK") else "NULL"},
+            {"Sum_Few" if has("FACTURE", "Sum_Few") else "NULL"}, _row_hash FROM {{FACTURE}}""", "FACTURE")
     # last purchase price before the sale (E13.3); 0 = none known → NULL. Optional column in older schema families.
     last_purchase = "NULLIF(EndBuy_PriceK, 0)" if has("FACTART", "EndBuy_PriceK") else "NULL"
     load(f"""INSERT INTO document_line SELECT Fac_Type, Fac_Code, A_Code, A_Index, coalesce(Few_Article,0), coalesce(Price_BS,0),

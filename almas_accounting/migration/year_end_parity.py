@@ -20,6 +20,11 @@ def run(conn, db: str, year: str, pl_code: str = "5020003") -> dict:
                              WHERE l.entry_id = %s AND a.code = core.setting_value('account_ending_inventory')""", (ents["closing_temporary"],)).fetchone()[0]
     pl = conn.execute("SELECT id FROM core.account WHERE code = %s", (pl_code,)).fetchone()[0]
     out = {"ending_inventory_input": float(endinv)}
+    if conn.execute("SELECT to_regclass('core.stock_movement') IS NOT NULL AND EXISTS (SELECT 1 FROM core.stock_movement)").fetchone()[0]:
+        # the same figure computed by the new inventory (012): goods only — services carry no stock in the new model
+        own = conn.execute("SELECT core.ending_inventory_value(%s)", (year,)).fetchone()[0]
+        out["core_inventory_valuation"] = float(own)
+        out["core_minus_holoo_input"] = float(own) - float(endinv)
     for stage, state in (("temporary", "closing_temporary"), ("permanent", "closing")):
         h = collections.Counter(); c = collections.Counter()
         for a, p, n in conn.execute("SELECT account_id, party_id, sum(debit - credit) FROM core.journal_line WHERE entry_id = %s GROUP BY 1, 2", (ents[state],)):

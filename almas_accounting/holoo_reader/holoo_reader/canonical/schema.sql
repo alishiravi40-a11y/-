@@ -33,7 +33,11 @@ CREATE TABLE document (
   fac_type VARCHAR, fac_code VARCHAR, number BIGINT, kind VARCHAR, kind_name VARCHAR, doc_date DATE, doc_jdate VARCHAR,
   person_code VARCHAR, total DOUBLE, cash DOUBLE, card DOUBLE, cheque DOUBLE, credit DOUBLE, discount DOUBLE,
   voucher_code INTEGER, user_code INTEGER, channel VARCHAR, web_order_no VARCHAR, tax_state INTEGER, tax_id VARCHAR,
-  saved_date DATE, comment VARCHAR, source_row_hash VARCHAR, PRIMARY KEY (fac_type, fac_code));
+  saved_date DATE, comment VARCHAR,
+  doc_time VARCHAR,                -- FACTURE.Fac_Time (HH:MM:SS): Holoo orders its cost kardex by date, time, type (E23)
+  extra_cost DOUBLE,               -- FACTURE.HazFactK: purchase-invoice extra costs, added per unit to the cost (E23)
+  total_qty DOUBLE,                -- FACTURE.Sum_Few: quantity the extra costs are spread over
+  source_row_hash VARCHAR, PRIMARY KEY (fac_type, fac_code));
 
 CREATE TABLE document_line (
   fac_type VARCHAR, fac_code VARCHAR, a_code VARCHAR, line_index INTEGER, qty DOUBLE, unit_price DOUBLE,

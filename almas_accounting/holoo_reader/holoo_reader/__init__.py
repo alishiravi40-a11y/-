@@ -1,2 +1,2 @@
 """Holoo Backup Reader — independent ingestion layer for Holoo (TNC) accounting backups."""
-READER_VERSION = "0.3.0"
+READER_VERSION = "0.4.0"
