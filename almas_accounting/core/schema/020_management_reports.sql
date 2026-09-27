@@ -53,3 +53,21 @@ INSERT INTO core.operation_catalog VALUES
   ('reports.monthly_margin', 'read', 'core.monthly_sales_margin(text)', 'monthly net sales and gross margin (cost from the kardex; periodic inventory D-02)', NULL,
    'none', '—', 'D-02, E23', true),
   ('reports.inventory_status', 'read', 'core.inventory_status(date)', 'stock, value and days since last sale per model and warehouse', NULL, 'none', '—', 'E23', true);
+
+-- A transfer moves the SAME model between warehouses. Holoo allowed a transfer between item codes whose names differ
+-- (5 pairs, 7 units in 1404): the destination cannot take the source model's average, and the kardex value is not
+-- conserved for those models. New transfers must keep the model; legacy ones are listed by control I-02.
+CREATE FUNCTION core.trg_transfer_same_model() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.legacy OR NEW.kind NOT IN ('transfer_in', 'transfer_out') THEN RETURN NEW; END IF;
+  IF NEW.transfer_id IS NULL THEN RAISE EXCEPTION 'a transfer needs its transfer_id'; END IF;
+  IF EXISTS (SELECT 1 FROM core.stock_movement o WHERE o.transfer_id = NEW.transfer_id AND o.id <> NEW.id AND o.item_id <> NEW.item_id) THEN
+    RAISE EXCEPTION 'a transfer moves the same model between warehouses (transfer %)', NEW.transfer_id; END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER transfer_same_model BEFORE INSERT ON core.stock_movement FOR EACH ROW EXECUTE FUNCTION core.trg_transfer_same_model();
+
+CREATE VIEW core.inventory_cross_model_transfers AS
+SELECT o.transfer_id, o.item_id AS from_item_id, i.item_id AS to_item_id, o.qty, o.effective_date
+FROM core.stock_movement o JOIN core.stock_movement i ON i.transfer_id = o.transfer_id AND i.kind = 'transfer_in'
+WHERE o.kind = 'transfer_out' AND o.item_id <> i.item_id;

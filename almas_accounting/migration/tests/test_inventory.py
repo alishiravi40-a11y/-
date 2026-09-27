@@ -72,3 +72,16 @@ def test_movements_are_immutable_and_reversal_drops_out(db, inv):
     db.execute("""INSERT INTO core.stock_movement (item_id, warehouse_id, kind, effective_date, qty, source, created_by, reverses_id)
                   VALUES (%s, %s, 'sale', '2026-04-01', 1, 'test', 't', %s)""", (i, w["W1"], s))
     assert db.execute("SELECT qty, value FROM core.inventory_valuation('2026-12-31')").fetchone() == (3, 300)
+
+
+def test_new_transfers_keep_the_model(db, inv):
+    w, i = inv
+    other = db.execute("INSERT INTO core.item (code, name, model_key) VALUES ('M2', 'other', 'other') RETURNING id").fetchone()[0]
+    mv(db, i, w["W1"], "opening", "2026-03-21", 5, 100)
+    mv(db, i, w["W1"], "transfer_out", "2026-04-02", 2, transfer=7)
+    with pytest.raises(psycopg.errors.RaiseException, match="same model"):
+        mv(db, other, w["W2"], "transfer_in", "2026-04-02", 2, transfer=7)
+    mv(db, other, w["W2"], "transfer_in", "2026-04-02", 2, transfer=8, legacy=True)       # history is kept, and listed
+    db.execute("INSERT INTO core.stock_movement (item_id, warehouse_id, kind, effective_date, qty, transfer_id, source, created_by, legacy) "
+               "VALUES (%s, %s, 'transfer_out', '2026-04-02', 2, 8, 'test', 't', true)", (i, w["W1"]))
+    assert db.execute("SELECT count(*) FROM core.inventory_cross_model_transfers").fetchone()[0] == 1

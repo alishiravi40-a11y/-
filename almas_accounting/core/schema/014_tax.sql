@@ -73,26 +73,26 @@ ORDER BY s.document_source, s.document_ref, s.sent_at DESC NULLS LAST, s.id DESC
 -- controls (W-08): every row is something a person must look at
 CREATE FUNCTION core.tax_controls(p_as_of date)
 RETURNS TABLE (control text, severity text, documents bigint, detail text) LANGUAGE sql STABLE AS $$
-  SELECT 'T-01', 'high', count(*), 'final sales invoices of the new system with no accepted submission after the allowed days'
+  SELECT 'T-01', 'high', count(*), 'فاکتور فروش قطعی که پس از مهلت مجاز هنوز در سامانه مؤدیان پذیرفته نشده'
   FROM core.sales_invoice i
   WHERE i.status = 'final' AND i.invoice_date <= p_as_of - core.setting_value('tax_submission_max_days')::int
     AND NOT EXISTS (SELECT 1 FROM core.tax_document_status t WHERE t.document_source = 'sales_invoice' AND t.document_ref = i.id::text
                     AND t.last_status = 'accepted')
   UNION ALL
-  SELECT 'T-02', 'high', count(*), 'invoices whose latest attempt failed, was rejected or is still pending'
+  SELECT 'T-02', 'high', count(*), 'فاکتورهایی که آخرین ارسالشان ناموفق، ردشده یا در انتظار است'
   FROM core.tax_document_status WHERE last_status IN ('failed', 'rejected', 'pending', 'queued', 'sent')
   UNION ALL
-  SELECT 'T-03', 'high', count(*), 'tax ids accepted for more than one invoice'
+  SELECT 'T-03', 'high', count(*), 'شماره مالیاتی پذیرفته‌شده برای بیش از یک فاکتور'
   FROM (SELECT tax_id FROM core.tax_submission WHERE status = 'accepted' GROUP BY tax_id
         HAVING count(DISTINCT (document_source, document_ref)) > 1) d
   UNION ALL
-  SELECT 'T-04', 'medium', count(*), 'invoices sent more than once (resends)'
+  SELECT 'T-04', 'medium', count(*), 'فاکتورهای ارسال‌شده بیش از یک بار'
   FROM core.tax_document_status WHERE attempts > 1
   UNION ALL
-  SELECT 'T-05', 'low', count(*), 'legacy submissions with an unproven Holoo send type (kept raw, NEEDS_MORE_EVIDENCE)'
+  SELECT 'T-05', 'low', count(*), 'ارسال‌های هلو با نوع اثبات‌نشده (خام نگه داشته شده)'
   FROM core.tax_submission WHERE subject = 'legacy_unknown'
   UNION ALL
-  SELECT 'T-06', 'high', count(*), 'Holoo invoice flag disagrees with its own submission log — verify in the Moadian portal'
+  SELECT 'T-06', 'high', count(*), 'پرچم فاکتور هلو با سابقه ارسال خودش مغایر است؛ در پرتال مؤدیان استعلام شود'
   FROM core.legacy_tax_flag f JOIN core.tax_document_status t USING (document_source, document_ref)
   WHERE (f.holoo_state = 2) <> (t.last_status = 'accepted') $$;
 

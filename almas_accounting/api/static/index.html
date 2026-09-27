@@ -108,9 +108,13 @@ const options = (rows, key, label) => rows.map(r => `<option value="${r[key]}">$
 // ---- views ----
 const views = {
   async inbox() {
-    const rows = await op('controls.inbox', {p_as_of: todayIso});
+    const k = window._keep || {}, asOf = k.inboxd ? j2iso(k.inboxd) : todayIso;
+    const head = `<div class="card row"><label>تا تاریخ <input id="inboxd" value="${k.inboxd || jdate(todayIso)}" size="10"></label>
+      <button class="btn" onclick="show('inbox')">به‌روزرسانی</button></div>`;
+    if (!asOf) return head + '<p class="err">تاریخ نامعتبر است.</p>';
+    const rows = await op('controls.inbox', {p_as_of: asOf});
     const open = rows.filter(r => Number(r.items) > 0), clear = rows.length - open.length, order = ['high', 'medium', 'low'];
-    return `<div class="card"><p>${fmt(open.length)} کنترل نیازمند توجه · <span class="zero">${fmt(clear)} کنترل بدون مورد</span></p>` +
+    return head + `<div class="card"><p>${fmt(open.length)} کنترل نیازمند توجه · <span class="zero">${fmt(clear)} کنترل بدون مورد</span></p>` +
       table(open.sort((a, b) => order.indexOf(a.severity) - order.indexOf(b.severity)),
             [['area', 'حوزه'], ['control', 'کد'], ['severity', 'شدت'], ['title', 'شرح'], ['items', 'تعداد'], ['amount', 'مبلغ (ریال)'], ['basis', 'پشتوانه']]) + '</div>';
   },
@@ -137,7 +141,7 @@ const views = {
       ['overdue_over_90', 'بیش از ۹۰ روز'], ['unapplied_credit', 'بستانکار تخصیص‌نیافته'], ['net', 'خالص'], ['oldest_open_due', 'قدیمی‌ترین سررسید']]) + '</div>';
   },
   async tb() {
-    const y = $('#tby')?.value || '', f = $('#tbf')?.value || '', t = $('#tbt')?.value || '';
+    const k = window._keep || {}, y = k.tby || '', f = k.tbf || '', t = k.tbt || '';
     let out = `<div class="card row"><label>سال مالی <input id="tby" value="${y}" size="5" placeholder="۱۴۰۵"></label>
       <label>از <input id="tbf" value="${f}" size="10" placeholder="۱۴۰۵/۰۱/۰۱"></label><label>تا <input id="tbt" value="${t}" size="10" placeholder="۱۴۰۵/۱۲/۲۹"></label>
       <button class="btn" onclick="show('tb')">نمایش</button></div>`;
@@ -149,7 +153,7 @@ const views = {
       ['period_credit', 'گردش بستانکار'], ['closing_debit', 'مانده بدهکار'], ['closing_credit', 'مانده بستانکار']]) + '</div>';
   },
   async mgmt() {
-    const y = $('#my')?.value || '';
+    const y = (window._keep || {}).my || '';
     let out = `<div class="card row"><label>سال مالی <input id="my" value="${y}" size="5" placeholder="۱۴۰۵"></label>
       <button class="btn" onclick="show('mgmt')">نمایش</button></div>`;
     if (!y) return out + '<p class="muted">سال مالی را وارد کنید.</p>';
@@ -310,6 +314,8 @@ async function show(tab) {
   current = tab;
   document.querySelectorAll('nav button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab));
   if (!user) { $('#view').innerHTML = '<p class="muted">نام کاربری را وارد کنید.</p>'; return; }
+  // keep what the user typed before the view is redrawn (report parameters)
+  window._keep = {}; document.querySelectorAll('#view input').forEach(i => { if (i.id) window._keep[i.id] = i.value; });
   $('#view').innerHTML = '<p class="muted">در حال بارگذاری…</p>';
   try { $('#view').innerHTML = await views[tab](); } catch (e) { $('#view').innerHTML = `<p class="err">${e.message}</p>`; }
 }

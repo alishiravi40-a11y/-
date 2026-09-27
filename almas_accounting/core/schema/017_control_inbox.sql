@@ -17,10 +17,10 @@ RETURNS TABLE (area text, control text, severity text, title text, items bigint,
   -- receivables (TRE-07)
   SELECT 'receivables', 'R-01', 'high', 'مطالبات بیش از ۹۰ روز از سررسید', count(*) FILTER (WHERE coalesce(d91_180, 0) + coalesce(d181_365, 0) + coalesce(over_365, 0) > 0),
          coalesce(sum(coalesce(d91_180, 0) + coalesce(d181_365, 0) + coalesce(over_365, 0)), 0), 'TRE-07, W-17'
-  FROM core.aging(p_as_of)
+  FROM core.aging(p_as_of) g JOIN core.account ac ON ac.id = g.account_id AND ac.nature = 'debit'      -- receivable accounts only
   UNION ALL
-  SELECT 'receivables', 'R-02', 'medium', 'بستانکاری تخصیص‌نیافته (پیش‌دریافت یا اضافه‌پرداخت)', count(*) FILTER (WHERE unapplied_credit > 0), coalesce(sum(unapplied_credit), 0), 'TRE-07'
-  FROM core.aging(p_as_of)
+  SELECT 'receivables', 'R-02', 'medium', 'بستانکاری تخصیص‌نیافته مشتری (پیش‌دریافت یا اضافه‌پرداخت)', count(*) FILTER (WHERE unapplied_credit > 0), coalesce(sum(unapplied_credit), 0), 'TRE-07'
+  FROM core.aging(p_as_of) g JOIN core.account ac ON ac.id = g.account_id AND ac.nature = 'debit'
   UNION ALL
   SELECT 'receivables', 'R-03', 'high', 'مغایرت سن‌بندی با مانده دفتر (باید صفر باشد)', count(*), coalesce(sum(abs(aging_net - ledger_balance)), 0), 'E21'
   FROM core.aging_control(p_as_of)
@@ -36,6 +36,10 @@ RETURNS TABLE (area text, control text, severity text, title text, items bigint,
   -- inventory (W-11)
   SELECT 'inventory', 'I-01', 'low', 'کالا×انبار با سابقه موجودی منفی (انتقالی از هلو)', count(*), NULL::numeric, 'W-11'
   FROM core.inventory_negative_legacy
+  UNION ALL
+  SELECT 'inventory', 'I-02', 'medium', 'انتقال بین دو کد کالا با نام متفاوت (انتقالی از هلو؛ ادغام مدل نیازمند تأیید)', count(*), NULL::numeric, 'E26'
+  FROM core.stock_movement o JOIN core.stock_movement i ON i.transfer_id = o.transfer_id AND i.kind = 'transfer_in'
+  WHERE o.kind = 'transfer_out' AND o.item_id <> i.item_id
   UNION ALL
   -- tax (W-08, W-39)
   SELECT 'tax', t.control, t.severity, t.detail, t.documents, NULL::numeric, 'E25, W-08, W-39' FROM core.tax_controls(p_as_of) t
