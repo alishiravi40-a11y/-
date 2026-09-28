@@ -73,7 +73,7 @@ def derive(conn, db, seed: dict | None = None):
     for e in ev:
         eid, chk, st, dt, v, acc, box, dirn, amt, person, num, accno = e
         if v in opening and chk in seed:                            # its opening position is the previous year's end: compare, never re-add
-            if st == "V":
+            if st == "V":                                            # V + a counterparty (even «00000», RetVazeatCheck) = spent; V alone = collected
                 expected = pacc(acc, "out") if (acc and dirn == "in") else None
             else:
                 expected = boxes.get(box) if st in ("D", "M", "R") else coll.get(acc) if st == "J" else None
@@ -267,13 +267,16 @@ def migrate(conn, db: str, user: str = "holoo-migration") -> dict:
             stats["type:" + t] += 1
         # continued cheques: the new year's opening position against the core's location (state for closed / issued cheques)
         for e, expected in checks:
-            chk, st, dirn = e[1], e[2], e[7]
-            core = conn.execute("SELECT state, account_id, party_id FROM core.cheque_status WHERE cheque_id = %s", (ids[chk],)).fetchone()
+            chk, st, dirn, hacc = e[1], e[2], e[7], (e[5] or "").strip()
+            # the core's position at the end of the day before the new year's opening — not after the new year's events
+            core = conn.execute("SELECT * FROM core.cheque_position_at(%s, %s::date - 1)", (ids[chk], e[3])).fetchone()
             exp = acc(expected) if expected else None
             if dirn == "out":
                 same = (st == "P" and core[0] in ("issued", "opening_position")) or (st != "P" and core[0] in ("paid_by_bank", "settled_otherwise"))
-            elif st == "V" and not expected:                        # collected before the year end
+            elif st == "V" and not hacc:                            # collected before the year end
                 same = core[0] in ("collected", "cashed")
+            elif st == "V":                                          # spent: to the named party, or to «nobody» (W-32: the voucher decides)
+                same = core[0] == "endorsed_to_party" and (exp is None or (exp[0], exp[1]) == (core[1], core[2]))
             else:
                 same = exp is not None and (exp[0], exp[1]) == (core[1], core[2])
             conn.execute("""INSERT INTO core.legacy_cheque_opening_check (source_db, check_code, cheque_id, holoo_state, holoo_account_id, holoo_party_id,

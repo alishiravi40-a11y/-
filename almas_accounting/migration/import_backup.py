@@ -232,12 +232,16 @@ def run(files: list[str], workdir: str, pg_dsn: str, fiscal_year: str | None = N
             if why and not allow_older:
                 _set(pg, batch, status="refused", error=why, finished_at=dt.datetime.now(dt.timezone.utc))
                 return {"batch": batch, "status": "refused", "reason": why}
+            # a repeat is a run THIS database has already received — not what the Reader's own registry remembers
+            # (a reused Reader work folder reports «duplicate» for a backup this core database has never seen)
+            seen = pg.execute("""SELECT to_regclass('holoo_mirror.import_run') IS NOT NULL""").fetchone()[0] and pg.execute(
+                "SELECT EXISTS (SELECT 1 FROM holoo_mirror.import_run WHERE run_id = %s)", (report["run_id"],)).fetchone()[0]
             pub = publish_pg.publish(res["silver_path"], pg_dsn)
             run_id = pub["run_id"]
             # fresh statistics after publishing: without them the planner can pick nested loops over the mirror (minutes → hours)
             for (t,) in pg.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'holoo_mirror' AND table_type = 'BASE TABLE'").fetchall():
                 pg.execute(f'ANALYZE holoo_mirror."{t}"')
-            repeat = run_id if res["status"] == "duplicate" else None
+            repeat = run_id if seen else None
             _set(pg, batch, change_summary={**change_summary(pg, run_id, src, repeat), "added_columns": pub["added_columns"],
                                             **({"older_backup_allowed": why} if why else {})})
             migrate_run(pg, src, fiscal_year, run_id, batch)

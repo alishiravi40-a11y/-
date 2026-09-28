@@ -25,6 +25,16 @@ CREATE TABLE core.legacy_cheque_opening_check (
   PRIMARY KEY (source_db, check_code));
 COMMENT ON TABLE core.legacy_cheque_opening_check IS 'a new Holoo year''s opening position of a continued cheque, compared with the core';
 
+-- where a cheque was at the end of a day (its last live event up to that date; a cheque closed before migration keeps that state)
+CREATE FUNCTION core.cheque_position_at(p_cheque bigint, p_date date) RETURNS TABLE (state text, account_id int, party_id int) LANGUAGE sql STABLE AS $$
+  SELECT coalesce(x.event_type, c.closed_before_migration), x.to_account_id, x.to_party_id
+  FROM core.cheque c LEFT JOIN LATERAL (
+    SELECT e.event_type, e.to_account_id, e.to_party_id FROM core.cheque_event e
+    WHERE e.cheque_id = c.id AND e.event_type IS NOT NULL AND e.reverses_event_id IS NULL AND e.effective_date <= p_date
+      AND NOT EXISTS (SELECT 1 FROM core.cheque_event r WHERE r.reverses_event_id = e.id)
+    ORDER BY e.effective_date DESC, e.id DESC LIMIT 1) x ON true
+  WHERE c.id = p_cheque $$;
+
 CREATE FUNCTION core.cheque_opening_controls(p_as_of date DEFAULT current_date)
 RETURNS TABLE (area text, control text, severity text, title text, items bigint, amount numeric, basis text) LANGUAGE sql STABLE AS $$
   SELECT 'cheques', 'CHQ-OPEN', 'high', 'محل چک در افتتاحیه سال تازه هلو با محل آن در سیستم یکی نیست', count(*), sum(c.amount), 'E31'
