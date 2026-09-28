@@ -107,12 +107,12 @@ export default {
         action('vsave', 'vmsg', async () => {
           const body = lines.filter(l => l.account_code).map((l, i) => ({account_code: latin(l.account_code), party_id: picked['vp' + lines.indexOf(l)] || null,
             debit: Number(latin(l.debit || 0)) || null, credit: Number(latin(l.credit || 0)) || null, description: l.description || null}));
-          const id = one(await op('journal.post_manual', {p_date: readDate('vdate'), p_description: $('#vdesc').value, p_lines: body, p_idempotency_key: key}));
+          const id = one(await op('journal.post_manual', {p_date: readDate('vdate'), p_description: $('#vdesc').value, p_lines: body, p_idempotency_key: key, p_kind: $('#vkind').value}));
           location.hash = '#/entry/' + id;
         });
       };
       return card('', `<div class="row">${dateInput('vdate')}<label>شرح سند <input id="vdesc" size="40"></label>
-          <label>نوع <select id="vkind"><option value="normal">عادی</option></select></label></div><div id="vlines"></div>
+          <label>نوع <select id="vkind"><option value="normal">عادی</option><option value="adjustment">اصلاحی (در دوره در حال بستن هم پذیرفته می‌شود)</option></select></label></div><div id="vlines"></div>
         <div class="row"><button class="btn" id="vadd">+ ردیف</button><span id="vsum"></span><button class="btn primary" id="vsave">ثبت سند</button></div><div id="vmsg"></div>
         <p class="muted">سند فقط وقتی ثبت می‌شود که تراز باشد، دوره باز باشد و حساب شخص‌دار شخص داشته باشد. سند ثبت‌شده ویرایش یا حذف نمی‌شود؛ اصلاح با ابطال است.</p>`);
     }

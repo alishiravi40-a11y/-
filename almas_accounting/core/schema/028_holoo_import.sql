@@ -40,7 +40,8 @@ CREATE FUNCTION core.imports_list(p_limit int DEFAULT 50)
 RETURNS TABLE (batch_id bigint, started_at timestamptz, finished_at timestamptz, triggered_by text, source_db text, fiscal_year text, backup_sha256 text,
                reader_status text, status text, changes text, reconciliation text, open_reviews bigint) LANGUAGE sql STABLE AS $$
   SELECT b.id, b.started_at, b.finished_at, b.triggered_by, b.source_db, b.fiscal_year, left(b.backup_sha256, 12), b.reader_status, b.status,
-         (SELECT string_agg(k || ': ' || v, '، ' ORDER BY k) FROM jsonb_each_text(coalesce(b.change_summary -> 'totals', '{}')) x(k, v)),
+         (SELECT string_agg(CASE k WHEN 'added' THEN 'تازه' WHEN 'changed' THEN 'تغییرکرده' WHEN 'removed_in_source' THEN 'حذف‌شده' WHEN 'unchanged' THEN 'بدون تغییر' ELSE k END
+                            || ' ' || v, '، ' ORDER BY k) FROM jsonb_each_text(coalesce(b.change_summary -> 'totals', '{}')) x(k, v)),
          (SELECT string_agg(k || '=' || (v ->> 'status'), '، ' ORDER BY k) FROM jsonb_each(coalesce(b.reconciliation, '{}')) x(k, v)),
          (SELECT count(*) FROM core.legacy_change_review r WHERE r.batch_id = b.id AND r.status = 'open')
   FROM core.holoo_import_batch b ORDER BY b.id DESC LIMIT least(p_limit, 500) $$;

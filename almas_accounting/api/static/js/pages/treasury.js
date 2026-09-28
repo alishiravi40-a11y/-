@@ -34,11 +34,12 @@ export default {
             window.dispatchEvent(new Event('almas:refresh'));
           });
         }
+        lookup('eparty', 'parties.find', 'party_id', 'name');
         $$('[data-act]').forEach(b => b.onclick = async () => {
           const [id, a] = b.dataset.act.split(':'); const args = {p_cheque: Number(id), p_action: a, p_date: j2iso($('#cdate').value) || todayIso};
           try {
             if (a === 'deposit') args.p_bank_account = Number($('#cbank').value);
-            if (a === 'endorse') { const who = prompt('کد پرونده شخصی که چک به او واگذار می‌شود:'); if (!who) return; args.p_party = Number(latin(who)); }
+            if (a === 'endorse') { if (!picked.eparty) throw new Error('نخست در «واگذاری به» شخص را از فهرست انتخاب کنید.'); args.p_party = picked.eparty; }
             if (a === 'undo') { const why = prompt('علت برگرداندن آخرین عملیات این چک:'); if (!why) return;
               await op('cheques.undo_last', {p_cheque: Number(id), p_date: args.p_date, p_reason: why}); }
             else await op('cheques.move', args);
@@ -60,7 +61,8 @@ export default {
           <option value="out" ${p.dir === 'out' ? 'selected' : ''}>پرداختی</option></select></label>
           <label>وضعیت <select id="cstate"><option value="">همه</option>${Object.entries(STATE).map(([k, v]) => `<option value="${k}" ${p.state === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
           <label>شماره یا نام <input id="cq" value="${esc(p.q || '')}" size="14"></label><button class="btn" id="cgo">نمایش</button></div>
-        <div class="row">${dateInput('cdate', 'تاریخ عملیات')}<label>بانک برای خواباندن <select id="cbank">${options(banks, 'bank_account_id', 'title')}</select></label></div>` +
+        <div class="row">${dateInput('cdate', 'تاریخ عملیات')}<label>بانک برای خواباندن <select id="cbank">${options(banks, 'bank_account_id', 'title')}</select></label>
+          <label>واگذاری به <input id="eparty" size="20" placeholder="نام شخص"></label></div>` +
         table(rows.map(r => ({...r, st: (STATE[r.state] || r.state) + (r.overdue ? ' ⚠ سررسید گذشته' : ''), dir: r.direction === 'in' ? 'دریافتی' : 'پرداختی', act: acts(r)})),
           [['dir', 'نوع'], ['number', 'شماره'], ['party_name', 'شخص'], ['amount', 'مبلغ'], ['due_date', 'سررسید'], ['st', 'وضعیت'], ['location_name', 'محل'], ['act', '', 'html']]) +
         '<div id="cmsg"></div><p class="muted">هر عملیات سند خودش را دارد؛ «برگرداندن» آخرین عملیات را با سند معکوس خنثی می‌کند، نه با حذف.</p>');

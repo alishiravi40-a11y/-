@@ -67,6 +67,8 @@ def change_summary(pg, run: str, source_db: str) -> dict:
     tables = [r[0] for r in pg.execute("SELECT DISTINCT table_name FROM holoo_mirror.change_log WHERE source_db = %s", (source_db,))]
     tables = sorted(set(tables) | {r[0] for r in pg.execute(
         "SELECT table_name FROM information_schema.tables WHERE table_schema = 'holoo_mirror' AND table_name NOT IN ('import_run', 'change_log')")})
+    # the first import of a Holoo database has nothing to compare with: every row it brings is new
+    first = not pg.execute("SELECT 1 FROM holoo_mirror.import_run WHERE source_db = %s AND run_id <> %s LIMIT 1", (source_db, run)).fetchone()
     out, tot = {}, {"added": 0, "changed": 0, "removed_in_source": 0, "unchanged": 0}
     for t in tables:
         ch = dict(pg.execute("SELECT change, count(*) FROM holoo_mirror.change_log WHERE run_id = %s AND source_db = %s AND table_name = %s GROUP BY 1",
@@ -78,10 +80,12 @@ def change_summary(pg, run: str, source_db: str) -> dict:
         live = pg.execute(f'SELECT count(*) FROM holoo_mirror."{t}" WHERE source_db = %s AND removed_run IS NULL', (source_db,)).fetchone()[0]
         row = {"added": ch.get("added", 0), "changed": ch.get("changed", 0), "removed_in_source": ch.get("removed_in_source", 0)}
         row["unchanged"] = live - row["added"] - row["changed"]
+        if first:
+            row["added"], row["unchanged"] = live, 0
         out[t] = row
         for k in tot:
             tot[k] += row[k]
-    return {"tables": out, "totals": tot}
+    return {"tables": out, "totals": tot, "first_import": first}
 
 
 def reconcile(pg, source_db: str, fiscal_year: str) -> dict:

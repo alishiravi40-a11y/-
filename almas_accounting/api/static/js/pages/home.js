@@ -2,7 +2,7 @@ import {api, card, ctx, esc, fmt, jdate, one, op, table, todayIso, j2iso, $} fro
 
 // a control's area → where the user fixes it
 const FIX = {receivables: 'aging', cheques: 'cheques', sales: 'sales', inventory: 'stock', tax: 'inbox', beta: 'agents', agents: 'agents', legacy: 'agents',
-             security: 'users', ledger: 'journal', import: 'holoo'};
+             security: 'users', ledger: 'journal', import: 'imports', coexistence: 'settings'};
 
 export default {
   dashboard: {

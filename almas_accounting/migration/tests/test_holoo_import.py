@@ -104,6 +104,8 @@ def test_newer_backup_changes_are_detected_and_applied_without_editing_legacy_fa
     publish, batch = imp
     r1 = publish("r1", backup_v1())
     assert r1["changes"] == {}                                                # first import of a database: nothing to compare
+    first = import_backup.change_summary(db, "r1", DB)
+    assert first["first_import"] and first["tables"]["document_line"] == {"added": 5, "changed": 0, "removed_in_source": 0, "unchanged": 0}
     holoo_inventory.migrate(db, DB)
     assert stock(db) == {"A1": 9, "A2": 2, "B1": 4}
     legacy_core_rows(db)
@@ -111,6 +113,7 @@ def test_newer_backup_changes_are_detected_and_applied_without_editing_legacy_fa
 
     r2 = publish("r2", backup_v2())
     cs = import_backup.change_summary(db, "r2", DB)
+    assert not cs["first_import"]
     assert cs["tables"]["document_line"] == {"added": 1, "changed": 1, "removed_in_source": 1, "unchanged": 3}
     assert cs["tables"]["item"] == {"added": 0, "changed": 1, "removed_in_source": 0, "unchanged": 2}
     assert cs["tables"]["cheque"]["changed"] == 1 and cs["tables"]["tax_submission"]["removed_in_source"] == 1
@@ -199,3 +202,33 @@ def test_batch_status_controls_and_review_resolution(db, imp):
     d = db.execute("SELECT core.import_detail(%s)", (b2,)).fetchone()[0]
     assert len(d["reviews"]) == 2 and d["status"] == "reconciled"
     assert db.execute("SELECT count(*) FROM core.audit_event WHERE object_type = 'legacy_change_review'").fetchone()[0] == 1
+
+
+def test_coexistence_native_and_holoo_entries_in_one_period_are_listed_until_the_book_of_record_is_decided(db):
+    from migration import holoo_ledger
+    from migration.tests.test_receivables import post
+    holoo_ledger.ensure_fiscal_year(db, "1405")
+    for code, party in [("1030008", True), ("9010001", False), ("10200010001", False)]:
+        db.execute("INSERT INTO core.account (code, name, level, is_leaf, nature, statement, requires_party) VALUES (%s, %s, 2, true, 'either', 'balance_sheet', %s)",
+                   (code, code, party))
+    ids = dict(db.execute("SELECT code, id FROM core.account").fetchall())
+    p = db.execute("INSERT INTO core.party (name) VALUES ('synthetic') RETURNING id").fetchone()[0]
+    db.execute("INSERT INTO core.app_user (username) VALUES ('owner')")
+    db.execute("INSERT INTO core.user_permission (username, permission, granted_by) VALUES ('owner', 'settings.change', 't')")
+    h, _ = post(db, ids, p, "2026-04-05", 700)
+    db.execute("SET session_replication_role = replica")                    # test only: mark the entry as imported from Holoo
+    db.execute("UPDATE core.journal_entry SET source = 'holoo', source_ref = 'hx:1' WHERE id = %s", (h,))
+    db.execute("SET session_replication_role = origin")
+    post(db, ids, p, "2026-04-10", 300)                                      # the same month, recorded natively
+    post(db, ids, p, "2026-06-10", 50)                                       # a month with no Holoo entry
+    ctl = lambda: {r[1]: (r[4], r[5]) for r in db.execute("SELECT * FROM core.coexistence_controls('2026-12-01')")}
+    assert ctl() == {"COEX-01": (1, 300), "COEX-02": (0, None), "COEX-03": (0, None)}
+    assert ("COEX-01", 1) in {(r[1], r[4]) for r in db.execute("SELECT * FROM core.control_inbox('2026-12-01')")}
+    db.execute("SELECT core.change_setting('book_of_record_from', '2026-04-08', 'owner', 'D-07 decided: new system from this date')")
+    assert ctl() == {"COEX-01": (0, None), "COEX-02": (0, None), "COEX-03": (0, None)}
+    db.execute("SELECT core.change_setting('book_of_record_from', '2026-04-01', 'owner', 'owner moved the start date')")
+    assert ctl()["COEX-02"] == (1, 700)                                      # Holoo still used after the switch
+    db.execute("SELECT core.change_setting('book_of_record_from', '2026-05-01', 'owner', 'owner moved the start date')")
+    assert ctl()["COEX-03"] == (1, 300)                                      # a native entry inside Holoo's time
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute("SELECT core.change_setting('book_of_record_from', 'soon', 'owner', 'a reason long enough')")
