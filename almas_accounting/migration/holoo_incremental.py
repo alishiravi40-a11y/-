@@ -73,7 +73,7 @@ def review_queue(conn, db: str, run: str, batch: int) -> dict:
                                ELSE 'سابقه ارسال مؤدیان در هلو تغییر کرده یا حذف شده است' END
       FROM holoo_mirror.change_log c
       WHERE c.run_id = %(run)s AND c.source_db = %(db)s AND c.change IN ('changed', 'removed_in_source')
-        AND ((c.table_name = 'cheque' AND EXISTS (SELECT 1 FROM core.cheque k WHERE k.legacy_source_db = %(db)s AND k.holoo_check_code::text = c.entity_key ->> 'check_code'))
+        AND ((c.table_name = 'cheque' AND EXISTS (SELECT 1 FROM core.cheque_legacy_code k WHERE k.source_db = %(db)s AND k.check_code::text = c.entity_key ->> 'check_code'))
           OR (c.table_name = 'cheque_event' AND EXISTS (SELECT 1 FROM core.cheque_event e WHERE e.legacy_source_db = %(db)s AND e.legacy_event_id::text = c.entity_key ->> 'event_id'))
           OR (c.table_name = 'tax_submission' AND EXISTS (SELECT 1 FROM core.tax_submission t WHERE t.legacy AND t.legacy_id::text = c.entity_key ->> 'id')))
       ON CONFLICT DO NOTHING""", {"b": batch, "run": run, "db": db}).rowcount

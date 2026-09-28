@@ -117,14 +117,19 @@ def reconcile(pg, source_db: str, fiscal_year: str) -> dict:
                       "avg_cost_equal": inv.get("avg_cost_equal", 0), "item_codes_in_stock": inv.get("item_codes_in_stock", 0),
                       "valuation_difference": inv["valuation_difference"], "lines_counted_twice": dup,
                       "opening_carried_forward": carry.get("carried_forward", 0), "opening_qty_differs": carry.get("qty_differs", 0)}
-    c = pg.execute("""SELECT (SELECT count(*) FROM holoo_mirror.cheque WHERE source_db = %(db)s AND removed_run IS NULL),
-                             (SELECT count(*) FROM core.cheque WHERE legacy_source_db = %(db)s),
-                             (SELECT count(*) FROM core.cheque k WHERE k.legacy_source_db = %(db)s AND NOT EXISTS (
-                                SELECT 1 FROM holoo_mirror.cheque h WHERE h.source_db = %(db)s AND h.check_code = k.holoo_check_code AND h.removed_run IS NULL))""",
+    # one core cheque per physical cheque across Holoo years (core 033): count through the (database, Check_Code) map
+    c = pg.execute("""SELECT (SELECT count(*) FROM holoo_mirror.cheque WHERE source_db = %(db)s AND removed_run IS NULL AND amount > 0),
+                             (SELECT count(*) FROM core.cheque_legacy_code WHERE source_db = %(db)s),
+                             (SELECT count(*) FROM core.cheque_legacy_code k WHERE k.source_db = %(db)s AND NOT EXISTS (
+                                SELECT 1 FROM holoo_mirror.cheque h WHERE h.source_db = %(db)s AND h.check_code = k.check_code AND h.removed_run IS NULL)),
+                             (SELECT count(*) FROM core.cheque_legacy_code WHERE source_db = %(db)s AND continued),
+                             (SELECT count(*) FROM core.legacy_cheque_opening_check WHERE source_db = %(db)s AND status = 'position_differs'),
+                             (SELECT count(*) FROM (SELECT cheque_id FROM core.cheque_legacy_code GROUP BY 1, source_db HAVING count(*) > 1) d)""",
                    {"db": source_db}).fetchone()
     chp = holoo_cheques.parity(pg, source_db)
-    r["cheques"] = {"status": "pass" if c[0] == c[1] and c[2] == 0 else "fail", "holoo_cheques": c[0], "core_cheques": c[1],
-                    "core_cheques_removed_in_holoo": c[2], "voucher_rule_parity": f"{chp['identical']}/{chp['vouchers']}"}
+    r["cheques"] = {"status": "pass" if c[0] == c[1] and c[2] == 0 and c[4] == 0 and c[5] == 0 else "fail", "holoo_cheques": c[0], "core_cheques": c[1],
+                    "core_cheques_removed_in_holoo": c[2], "continued_from_earlier_year": c[3], "opening_position_differs": c[4],
+                    "one_code_on_two_cheques": c[5], "voucher_rule_parity": f"{chp['identical']}/{chp['vouchers']}"}
     t = pg.execute("""SELECT (SELECT count(*) FROM holoo_mirror.tax_submission WHERE source_db = %(db)s AND removed_run IS NULL),
                              (SELECT count(*) FROM core.tax_submission s WHERE s.legacy AND EXISTS (SELECT 1 FROM holoo_mirror.tax_submission h
                                 WHERE h.source_db = %(db)s AND h.id = s.legacy_id AND h.removed_run IS NULL))""", {"db": source_db}).fetchone()

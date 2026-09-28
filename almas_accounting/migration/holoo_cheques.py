@@ -46,9 +46,12 @@ def _load(conn, db):
     return ev, boxes, pers, banks, lines, vtype, opening, cbox
 
 
-def derive(conn, db):
-    """Holoo events → [(event, type, from_code, to_code)] with codes in Holoo terms (None = from the voucher)."""
+def derive(conn, db, seed: dict | None = None):
+    """Holoo events → [(event, type, from_code, to_code)] with codes in Holoo terms (None = from the voucher), and the
+    opening positions of cheques continued from an earlier year → [(event, expected_code_or_None)] to be CHECKED (core 033).
+    seed: check_code → {"loc", "onhand", "bank"} (Holoo codes of this database) — where the core already has the cheque."""
     ev, boxes, pers, banks, lines, vtype, opening, cbox = _load(conn, db)
+    seed = seed or {}
     coll = {b[1]: b[2] for b in banks}; payable = {b[1]: b[3] for b in banks}
     bank_by_no = {}
     for b in banks:
@@ -60,9 +63,21 @@ def derive(conn, db):
             return None
         return (a[0] or a[1]) if side == "in" else (a[1] or a[0])
 
-    out, loc, onhand, bank_of, closed_prior = [], {}, {}, {}, set()
+    out, loc, onhand, bank_of, closed_prior, checks = [], {}, {}, {}, set(), []
+    for chk, s0 in seed.items():                                    # a cheque continued from an earlier year starts where the core has it
+        loc[chk] = s0.get("loc")
+        if s0.get("onhand"):
+            onhand[chk] = s0["onhand"]
+        if s0.get("bank"):
+            bank_of[chk] = s0["bank"]
     for e in ev:
         eid, chk, st, dt, v, acc, box, dirn, amt, person, num, accno = e
+        if v in opening and chk in seed:                            # its opening position is the previous year's end: compare, never re-add
+            if st == "V":
+                expected = pacc(acc, "out") if (acc and dirn == "in") else None
+            else:
+                expected = boxes.get(box) if st in ("D", "M", "R") else coll.get(acc) if st == "J" else None
+            checks.append((e, expected)); continue
         if v in opening and st not in ("D", "J", "P", "M", "R"):
             closed_prior.add(chk); continue                         # collected / spent before the year: no position
         if v in opening:
@@ -152,7 +167,34 @@ def derive(conn, db):
                 left[0][1] -= total
     order = {e[0]: i for i, e in enumerate(ev)}                  # back to chronological order per cheque
     resolved.sort(key=lambda r: order[r[0][0]])
-    return resolved, vtype, opening
+    return resolved, vtype, opening, checks
+
+
+def _seed(conn, db: str) -> dict:
+    """Where the core has each cheque continued into `db` from an earlier year, in Holoo codes of `db` (core 033)."""
+    code = lambda a, p: None if a is None else conn.execute(
+        """SELECT legacy_code FROM core.legacy_account_map WHERE source_db = %s AND account_id = %s AND party_id IS NOT DISTINCT FROM %s
+           ORDER BY legacy_code LIMIT 1""", (db, a, p)).fetchone()
+    seed = {}
+    for chk, cid, dirn in conn.execute("""SELECT m.check_code, m.cheque_id, c.direction FROM core.cheque_legacy_code m JOIN core.cheque c ON c.id = m.cheque_id
+                                         WHERE m.source_db = %s AND m.continued""", (db,)).fetchall():
+        st = conn.execute("SELECT account_id, party_id FROM core.cheque_status WHERE cheque_id = %s", (cid,)).fetchone()
+        if dirn == "out":                                            # an issued cheque sits on the notes-payable account of its bank
+            pay = conn.execute("""SELECT e.from_account_id FROM core.cheque_event e WHERE e.cheque_id = %s AND e.event_type IN ('issued', 'opening_position')
+                                  ORDER BY e.effective_date DESC, e.id DESC LIMIT 1""", (cid,)).fetchone()
+            loc = code(pay[0], None) if pay else None
+            bank = conn.execute("""SELECT g.legacy_code FROM core.company_bank_account k JOIN core.legacy_account_map g ON g.source_db = %s AND g.account_id = k.gl_account_id
+                                   WHERE k.payable_cheque_account_id = %s ORDER BY g.legacy_code LIMIT 1""", (db, pay[0] if pay else None)).fetchone()
+            seed[chk] = {"loc": loc[0] if loc else None, "bank": bank[0] if bank else None}
+            continue
+        loc = code(st[0], st[1]) if st else None
+        box = conn.execute("""SELECT e.to_account_id FROM core.cheque_event e JOIN core.cashbox b ON b.cheque_account_id = e.to_account_id
+                              WHERE e.cheque_id = %s ORDER BY e.effective_date DESC, e.id DESC LIMIT 1""", (cid,)).fetchone()
+        bank = conn.execute("""SELECT g.legacy_code FROM core.company_bank_account k JOIN core.legacy_account_map g ON g.source_db = %s AND g.account_id = k.gl_account_id
+                               WHERE k.collection_account_id = %s ORDER BY g.legacy_code LIMIT 1""", (db, st[0] if st else None)).fetchone()
+        onhand = code(box[0], None) if box else None
+        seed[chk] = {"loc": loc[0] if loc else None, "onhand": onhand[0] if onhand else None, "bank": bank[0] if bank else None}
+    return seed
 
 
 def migrate(conn, db: str, user: str = "holoo-migration") -> dict:
@@ -176,6 +218,18 @@ def migrate(conn, db: str, user: str = "holoo-migration") -> dict:
             LEFT JOIN core.legacy_account_map p ON p.source_db = b.source_db AND p.legacy_code = b.payable_cheque_account_code
             LEFT JOIN core.legacy_account_map f ON f.source_db = b.source_db AND f.legacy_code = b.fee_account_code
             WHERE b.source_db = %s ORDER BY b.bank_code, b.account_no, b.id ON CONFLICT (bank_code, account_no) DO NOTHING""", (db,))
+        # a cheque carried over from an earlier Holoo year (same code, number, amount, direction) continues that core cheque (core 033)
+        stats["cheques_continued"] = conn.execute("""
+            INSERT INTO core.cheque_legacy_code (source_db, check_code, cheque_id, continued)
+            SELECT DISTINCT ON (c.check_code) c.source_db, c.check_code, m.cheque_id, true
+            FROM holoo_mirror.cheque c
+            JOIN core.cheque_legacy_code m ON m.check_code = c.check_code AND m.source_db <> c.source_db
+            JOIN core.cheque k ON k.id = m.cheque_id AND k.number = coalesce(c.number, '?') AND k.amount = c.amount AND k.direction = c.direction
+            JOIN holoo_mirror.cheque p ON p.source_db = m.source_db AND p.check_code = m.check_code AND p.fiscal_year < c.fiscal_year
+            WHERE c.source_db = %s AND c.removed_run IS NULL AND c.amount > 0
+              AND NOT EXISTS (SELECT 1 FROM core.cheque_legacy_code x WHERE x.source_db = c.source_db AND x.check_code = c.check_code)
+            ORDER BY c.check_code, p.fiscal_year DESC
+            ON CONFLICT DO NOTHING""", (db,)).rowcount
         stats["cheques"] = conn.execute("""
             INSERT INTO core.cheque (direction, sayad_no, bank_code, number, amount, issue_date, due_date, party_id, holoo_check_code, legacy_source_db, bank_account_id)
             SELECT c.direction, NULL, c.bank_code, coalesce(c.number, '?'), c.amount, c.issue_date, c.due_date,
@@ -183,10 +237,12 @@ def migrate(conn, db: str, user: str = "holoo-migration") -> dict:
                    c.check_code, c.source_db,
                    (SELECT id FROM core.company_bank_account k WHERE k.account_no = c.account_no AND c.direction = 'out' LIMIT 1)
             FROM holoo_mirror.cheque c WHERE c.source_db = %s AND c.removed_run IS NULL AND c.amount > 0
-              AND NOT EXISTS (SELECT 1 FROM core.cheque x WHERE x.legacy_source_db = c.source_db AND x.holoo_check_code = c.check_code)""", (db,)).rowcount
-        ids = dict(conn.execute("SELECT holoo_check_code, id FROM core.cheque WHERE legacy_source_db = %s", (db,)).fetchall())
+              AND NOT EXISTS (SELECT 1 FROM core.cheque_legacy_code x WHERE x.source_db = c.source_db AND x.check_code = c.check_code)""", (db,)).rowcount
+        conn.execute("""INSERT INTO core.cheque_legacy_code (source_db, check_code, cheque_id)
+                        SELECT legacy_source_db, holoo_check_code, id FROM core.cheque WHERE legacy_source_db = %s ON CONFLICT DO NOTHING""", (db,))
+        ids = dict(conn.execute("SELECT check_code, cheque_id FROM core.cheque_legacy_code WHERE source_db = %s", (db,)).fetchall())
         done = {r[0] for r in conn.execute("SELECT legacy_event_id FROM core.cheque_event WHERE legacy_source_db = %s", (db,)).fetchall()}
-        resolved, vtype, opening = derive(conn, db)
+        resolved, vtype, opening, checks = derive(conn, db, _seed(conn, db))
         broken = set(); conflicts = []
         for e, t, f, to in resolved:
             eid, chk = e[0], e[1]
@@ -209,6 +265,26 @@ def migrate(conn, db: str, user: str = "holoo-migration") -> dict:
                 continue
             stats["events"] += 1
             stats["type:" + t] += 1
+        # continued cheques: the new year's opening position against the core's location (state for closed / issued cheques)
+        for e, expected in checks:
+            chk, st, dirn = e[1], e[2], e[7]
+            core = conn.execute("SELECT state, account_id, party_id FROM core.cheque_status WHERE cheque_id = %s", (ids[chk],)).fetchone()
+            exp = acc(expected) if expected else None
+            if dirn == "out":
+                same = (st == "P" and core[0] in ("issued", "opening_position")) or (st != "P" and core[0] in ("paid_by_bank", "settled_otherwise"))
+            elif st == "V" and not expected:                        # collected before the year end
+                same = core[0] in ("collected", "cashed")
+            else:
+                same = exp is not None and (exp[0], exp[1]) == (core[1], core[2])
+            conn.execute("""INSERT INTO core.legacy_cheque_opening_check (source_db, check_code, cheque_id, holoo_state, holoo_account_id, holoo_party_id,
+                                                                     core_state, core_account_id, core_party_id, status)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (source_db, check_code) DO UPDATE SET holoo_state = EXCLUDED.holoo_state, holoo_account_id = EXCLUDED.holoo_account_id,
+                              holoo_party_id = EXCLUDED.holoo_party_id, core_state = EXCLUDED.core_state, core_account_id = EXCLUDED.core_account_id,
+                              core_party_id = EXCLUDED.core_party_id, status = EXCLUDED.status, checked_at = now()""",
+                         (db, chk, ids[chk], st, exp[0] if exp else None, exp[1] if exp else None, core[0], core[1], core[2],
+                          "carried_forward" if same else "position_differs"))
+            stats["opening_" + ("carried_forward" if same else "position_differs")] += 1
         # cheques whose only Holoo record in this year is a closed state (V) inside the opening voucher: closed in a
         # previous year, no position here — keep their final state explicitly (208 in 1404)
         stats["closed_before_migration"] = conn.execute("""

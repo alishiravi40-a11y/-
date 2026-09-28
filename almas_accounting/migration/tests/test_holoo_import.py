@@ -96,6 +96,7 @@ def stock(db):
 def legacy_core_rows(db):
     """What an earlier import put in the core for cheques and Moadian (their own migration is tested elsewhere)."""
     db.execute("INSERT INTO core.cheque (direction, number, amount, holoo_check_code, legacy_source_db) VALUES ('in', '7', 1000, 7, %s), ('in', '8', 500, 8, %s)", (DB, DB))
+    db.execute("INSERT INTO core.cheque_legacy_code (source_db, check_code, cheque_id) SELECT legacy_source_db, holoo_check_code, id FROM core.cheque")
     db.execute("""INSERT INTO core.tax_submission (document_source, document_ref, subject, status, tax_id, legacy_id, legacy, created_by)
                   VALUES ('holoo:hx:F', '2', 'original', 'accepted', 'T1', 5, true, 't')""")
 

@@ -226,3 +226,25 @@ def test_every_cheque_has_a_status(db, t):
     st = {r[0]: (r[1], r[2]) for r in db.execute("SELECT cheque_id, kind, state FROM core.cheque_status")}
     assert st[live] == ("tracked", "received") and st[old] == ("closed_before_migration", "endorsed_to_party")
     assert st[orphan] == ("no_event", None)                                  # visible, never silently missing
+
+
+def test_a_cheque_continued_into_the_next_year_starts_where_the_core_has_it(db):
+    """FY1405 (E31): a cheque endorsed in FY1404 opens FY1405 as «spent to the supplier» and comes back: the return must come
+    FROM the supplier (the core's location), and the opening is compared, never added as a second position (core 033)."""
+    from migration.holoo_cheques import derive
+    db.execute(CHEQUE_MIRROR)
+    S = "year2"
+    db.execute("INSERT INTO holoo_mirror.person (source_db, c_code, name, debit_account, credit_account) VALUES (%s, '00002', 'supplier', '40101760002', '40101760002')", (S,))
+    db.execute("INSERT INTO holoo_mirror.cashbox VALUES (%s, 1, '10400010001')", (S,))
+    db.execute("INSERT INTO holoo_mirror.cheque VALUES (%s, 2, 'in', 200, '00001', 'B', NULL, 1)", (S,))
+    db.cursor().executemany("INSERT INTO holoo_mirror.cheque_event VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NULL)",
+                            [(S, 1, 2, "V", "2026-03-21", 1, "00002", None), (S, 2, 2, "S", "2026-08-31", 20, None, None)])
+    db.execute("INSERT INTO holoo_mirror.voucher (source_db, sanad_code, voucher_type, state) VALUES (%s, 1, 0, 'opening'), (%s, 20, 0, 'normal')", (S, S))
+    db.cursor().executemany("INSERT INTO holoo_mirror.voucher_line (source_db, sanad_code, account_code, debit, credit, in_ledger) VALUES (%s,%s,%s,%s,%s,true)",
+                            [(S, 20, "10400010001", 200, 0), (S, 20, "40101760002", 0, 200)])
+    resolved, _, _, checks = derive(db, S, {2: {"loc": "40101760002", "onhand": "10400010001"}})
+    assert [(e[0], t, f, to) for e, t, f, to in resolved] == [(2, "returned_by_endorsee", "40101760002", "10400010001")]
+    assert [(e[0], expected) for e, expected in checks] == [(1, "40101760002")]        # the opening is a check against the core
+    # without continuity (the old behaviour) the spent cheque had no holder and the return had no source
+    old, _, _, _ = derive(db, S)
+    assert all(t != "opening" for _, t, _, _ in old)
