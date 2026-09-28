@@ -184,6 +184,7 @@ HOLOO_SQL_PASSWORD=... python -m migration.audit_run --pg DSN --source-db holoo1
 HOLOO_SQL_PASSWORD=... HOLOO_SQL_SHARE_HOST=/مسیر/مشترک python -m migration.import_backup \
   --pg "$ALMAS_PG_DSN" --fiscal-year 1404 --workdir /مسیر/کار --holoo-views --operator <نام> backup.bak
 ```
+- **از رابط:** در صفحه «ورود Backup هلو» فایل انتخاب و ارسال می‌شود. سرور آن را در صف می‌گذارد و با همین مسیر اجرا می‌کند (`run_queued`). سال مالی از خود Backup خوانده می‌شود. دستور بالا فقط برای مدیر فنی است.
 - **مسیر:** Backup ← Reader (Restore فقط‌خواندنی، استخراج، کنترل سلامت) ← `holoo_mirror` (ثبت تازه، تغییرکرده و حذف‌شده در `change_log`) ← انتقال ← تطبیق.
 - **ثبت:** هر ورود یک ردیف `core.holoo_import_batch` است و در صفحه «ورود Backup هلو» دیده می‌شود.
 - **رد می‌شود:**
