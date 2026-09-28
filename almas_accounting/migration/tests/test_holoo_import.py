@@ -247,3 +247,15 @@ def test_one_import_at_a_time_and_a_dead_import_is_closed(db, imp):
     db.execute("SELECT pg_advisory_unlock(hashtext('core.holoo_import'))")
     with psycopg.connect(DSN, autocommit=True) as other:
         assert import_backup.claim(other) == 0
+
+
+def test_a_batch_left_running_by_a_dead_server_does_not_block_the_next_upload(db, imp):
+    _, batch = imp
+    dead = batch(status="running")
+    assert import_backup.close_stale(db) == 1
+    assert db.execute("SELECT status FROM core.holoo_import_batch WHERE id = %s", (dead,)).fetchone()[0] == "failed"
+    with psycopg.connect(DSN, autocommit=True) as worker:           # a live import holds the lock: nothing is touched
+        import_backup.claim(worker)
+        live = batch(status="running")
+        assert import_backup.close_stale(db) == -1
+        assert db.execute("SELECT status FROM core.holoo_import_batch WHERE id = %s", (live,)).fetchone()[0] == "running"

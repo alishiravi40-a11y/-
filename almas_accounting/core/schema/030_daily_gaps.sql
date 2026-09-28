@@ -365,6 +365,31 @@ CREATE FUNCTION core.years_overview() RETURNS TABLE (fiscal_year_id int, code te
          (SELECT round(sum(v.value)) FROM core.inventory_valuation(y.ends_on) v)
   FROM core.fiscal_year y ORDER BY y.starts_on DESC $$;
 
+-- ---------- the item card also says which movement is a warehouse transfer made here (so it can be reversed from the screen) ----------
+CREATE OR REPLACE FUNCTION core.item_detail(p_item int) RETURNS jsonb LANGUAGE sql STABLE AS $$
+  WITH k AS (SELECT * FROM core.item_kardex(p_item, NULL)),
+  last AS (SELECT DISTINCT ON (warehouse_id) warehouse_id, qty_after, avg_cost_after FROM k ORDER BY warehouse_id, effective_date DESC, effective_time DESC, movement_id DESC)
+  SELECT jsonb_build_object(
+    'item', (SELECT to_jsonb(i) FROM core.item i WHERE id = p_item),
+    'stock', (SELECT coalesce(jsonb_agg(jsonb_build_object('warehouse', w.name, 'qty', l.qty_after, 'avg_cost', round(l.avg_cost_after), 'value', round(l.qty_after * l.avg_cost_after))), '[]')
+              FROM last l JOIN core.warehouse w ON w.id = l.warehouse_id WHERE l.qty_after <> 0),
+    'movements', (SELECT coalesce(jsonb_agg(jsonb_build_object('date', k.effective_date, 'kind', k.kind, 'warehouse', (SELECT name FROM core.warehouse WHERE id = k.warehouse_id),
+                                                               'qty', k.qty, 'unit_cost', round(k.unit_cost), 'qty_after', k.qty_after,
+                                                               'transfer_id', CASE WHEN m.source = 'transfer' AND k.kind = 'transfer_out' THEN m.transfer_id END)
+                                                ORDER BY k.effective_date DESC, k.movement_id DESC), '[]')
+                  FROM (SELECT * FROM k ORDER BY effective_date DESC, movement_id DESC LIMIT 50) k JOIN core.stock_movement m ON m.id = k.movement_id)) $$;
+
+-- ---------- a party's allocations (which receipt settled which invoice), to see and undo one from the screen ----------
+CREATE FUNCTION core.party_settlements(p_party int)
+RETURNS TABLE (settlement_id bigint, account_code text, debit_date date, debit_voucher bigint, debit_description text, credit_date date, credit_voucher bigint,
+               credit_description text, amount numeric, method text, created_by text, created_at timestamptz) LANGUAGE sql STABLE AS $$
+  SELECT s.id, a.code, de.effective_date, de.number, coalesce(dl.description, de.description), ce.effective_date, ce.number, coalesce(cl.description, ce.description),
+         s.amount, s.method, s.created_by, s.created_at
+  FROM core.settlement_active s JOIN core.account a ON a.id = s.account_id
+  JOIN core.journal_entry de ON de.id = s.debit_entry_id JOIN core.journal_line dl ON dl.entry_id = s.debit_entry_id AND dl.line_no = s.debit_line_no
+  JOIN core.journal_entry ce ON ce.id = s.credit_entry_id JOIN core.journal_line cl ON cl.entry_id = s.credit_entry_id AND cl.line_no = s.credit_line_no
+  WHERE s.party_id = p_party ORDER BY de.effective_date DESC, s.id DESC LIMIT 500 $$;
+
 -- ---------- Holoo backup import from the application: a queued request, run by the server's import worker ----------
 ALTER TABLE core.holoo_import_batch DROP CONSTRAINT holoo_import_batch_status_check;
 ALTER TABLE core.holoo_import_batch ADD CONSTRAINT holoo_import_batch_status_check
@@ -406,5 +431,6 @@ INSERT INTO core.operation_catalog (operation, kind, function_signature, purpose
    'one fiscal year and 12 open periods; audited', 'an empty year is harmless; it is not deleted', 'D-05', false, false),
   ('years.change_status', 'write', 'core.change_fiscal_year_status(integer,text,text,text)', 'open / start closing / close / reopen a fiscal year', NULL,
    'the year''s status; audited with reason', 'the opposite change (period.reopen)', 'D-05', false, false),
+  ('ar.settlements', 'read', 'core.party_settlements(integer)', 'a party''s active allocations: which credit settled which debit', NULL, 'none', '—', 'W-17', true, false),
   ('imports.queue', 'write', 'core.import_queue(text,text)', 'queue an uploaded Holoo backup for import by the server', 'holoo.import',
    'one queued import batch', 'a queued batch that never starts is closed as failed by the next import', 'D-07', true, false);

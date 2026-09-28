@@ -20,6 +20,16 @@ def test_bank_statement_upload_reads_the_file_and_imports_once(env, db):
     assert bad.status_code == 400 and "تاریخ" in bad.json()["detail"]
     a = db.execute("SELECT after->>'channel' FROM core.audit_event WHERE action = 'api_call' AND object_id = 'bank.statement_import'").fetchone()[0]
     assert a == "file_upload"
+    # manual matching from the screen: a list of statement lines is an array argument (bigint[]), the book lines JSON
+    db.execute("INSERT INTO core.user_permission (username, permission, granted_by) VALUES ('ops', 'bank.reconcile', 't')")
+    call(c, "treasury.post", {"p_doc": {"kind": "receipt", "money_account_id": bank, "counter": [{"account_id": ids["1010001"], "amount": 1000}]},
+                              "p_date": "2026-04-01"})
+    open_lines = call(c, "bank.open_lines", {"p_bank_account": acc, "p_from": "2026-03-21", "p_to": "2026-04-30"})[1]["rows"]
+    st = [int(x["ref"]) for x in open_lines if x["side"] == "bank" and x["amount"] == "1000"]
+    bk = [[int(v) for v in x["ref"].split(":")] for x in open_lines if x["side"] == "book"]
+    r = call(c, "bank.reconcile", {"p_account": acc, "p_statement": st, "p_book": bk, "p_method": "manual", "p_note": None})
+    assert r[0] == 200, r
+    assert call(c, "years.create", {"p_code": "14x6", "p_period_starts": ["2027-03-21"], "p_ends_on": "2028-03-19"})[0] in (400, 403)
 
 
 def test_holoo_backup_upload_is_stored_and_queued(env, db, tmp_path, monkeypatch):

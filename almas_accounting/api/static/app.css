@@ -44,9 +44,10 @@ a{color:var(--accent)}
 .doc{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}.doc h1{font-size:20px;margin:0 0 6px}
 .doc .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 16px;margin:10px 0}.doc .sign{display:flex;justify-content:space-around;margin-top:40px}
 .doc .sign div{border-top:1px solid var(--line);padding-top:4px;min-width:160px;text-align:center}.progress{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.doc table.totals{width:auto;min-width:300px;margin-right:auto;margin-top:8px}
 .progress>i{display:block;height:100%;background:var(--accent);width:0}
 @media print{header,nav#nav,.btn,button,input,select,#results,.noprint{display:none!important}
   #printhead{display:flex!important;justify-content:space-between;gap:12px;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:10px;font-size:12px}
-  #printhead b{font-size:15px}.doc{border:0;padding:0}.doc .sign div{border-top:1px solid #000}
+  #view:has(.doc)>h1.pagetitle{display:none!important}#printhead b{font-size:15px}.doc{border:0;padding:0}.doc .sign div{border-top:1px solid #000}
   body{background:#fff!important;color:#000!important}.layout{display:block!important}main,#view{padding:0!important;margin:0!important;max-width:none!important}
   .card{border:0!important;box-shadow:none!important;break-inside:avoid}table{font-size:11px}a{color:#000;text-decoration:none}}

@@ -1,4 +1,4 @@
-import {$, card, ctx, dateInput, esc, fmt, latin, lookup, msg, num, one, op, options, picked, readDate, table, can} from '../core.js';
+import {$, $$, card, ctx, dateInput, esc, fmt, latin, lookup, msg, num, one, op, options, picked, readDate, table, can} from '../core.js';
 import {action} from './documents.js';
 
 const KIND = {opening: 'اول دوره', purchase: 'خرید', sale: 'فروش', sale_return: 'برگشت از فروش', purchase_return: 'برگشت از خرید', waste: 'ضایعات',
@@ -21,11 +21,13 @@ export default {
     async render(p) {
       const isNew = p.id === 'new', d = isNew ? {item: {}, stock: [], movements: []} : one(await op('items.detail', {p_item: Number(p.id)}));
       const it = d.item || {};
-      ctx.after = () => action('isave', 'imsg', async () => {
+      ctx.after = () => { $$('[data-trev]').forEach(b => b.onclick = async () => { const why = prompt('علت برگشت این انتقال:'); if (!why) return;
+          try { await op('stock.transfer_reverse', {p_transfer: Number(b.dataset.trev), p_reason: why}); window.dispatchEvent(new Event('almas:refresh')); } catch (e) { msg('imsg', esc(e.message)); } });
+        action('isave', 'imsg', async () => {
         const id = one(await op('items.save', {p_item: isNew ? null : Number(p.id), p_code: $('#icode').value || null, p_name: $('#iname').value, p_unit: $('#iunit').value || null,
                                                p_is_service: $('#isvc').checked}));
         location.hash = '#/item/' + id;
-      });
+      }); };
       const form = `<div class="row"><label>نام <input id="iname" value="${esc(it.name || '')}" size="28"></label><label>کد <input id="icode" value="${esc(it.code || '')}" size="10" ${isNew ? '' : 'disabled'}></label>
         <label>واحد <input id="iunit" value="${esc(it.unit || '')}" size="6"></label><label><input type="checkbox" id="isvc" ${it.is_service ? 'checked' : ''}> خدمت (بدون موجودی)</label>
         ${can('items.save') ? '<button class="btn primary" id="isave">ذخیره</button>' : ''}</div><div id="imsg"></div>`;
@@ -33,8 +35,9 @@ export default {
       return card(esc(it.name), form) +
         card('موجودی و ارزش', table(d.stock, [['warehouse', 'انبار'], ['qty', 'موجودی'], ['avg_cost', 'میانگین بها'], ['value', 'ارزش']], {totals: ['qty', 'value']}) +
              '<p class="muted">بها از کاردکس محاسبه می‌شود (میانگین موزون متحرک)؛ ذخیره نمی‌شود و با هر گردش تازه به‌روز است.</p>') +
-        card('کاردکس (۵۰ گردش آخر)', table(d.movements.map(m => ({...m, k: KIND[m.kind] || m.kind})), [['date', 'تاریخ'], ['k', 'نوع'], ['warehouse', 'انبار'], ['qty', 'مقدار'],
-             ['unit_cost', 'بهای واحد'], ['qty_after', 'مانده']]));
+        card('کاردکس (۵۰ گردش آخر)', table(d.movements.map(m => ({...m, k: KIND[m.kind] || m.kind,
+             rev: m.transfer_id && can('stock.transfer_reverse') ? `<button class="btn" data-trev="${m.transfer_id}">برگشت انتقال</button>` : ''})),
+             [['date', 'تاریخ'], ['k', 'نوع'], ['warehouse', 'انبار'], ['qty', 'مقدار'], ['unit_cost', 'بهای واحد'], ['qty_after', 'مانده'], ['rev', '', 'html']]));
     }
   },
   transfer: {

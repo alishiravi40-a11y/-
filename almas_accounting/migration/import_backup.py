@@ -244,9 +244,24 @@ def run(files: list[str], workdir: str, pg_dsn: str, fiscal_year: str | None = N
             raise
 
 
+def close_stale(pg) -> int:
+    """If no import holds the lock, a batch still «running» belongs to a process that died (server restart): close it.
+    Returns how many were closed; -1 if an import is really running."""
+    if not pg.execute("SELECT pg_try_advisory_lock(hashtext('core.holoo_import'))").fetchone()[0]:
+        return -1
+    try:
+        return pg.execute("""UPDATE core.holoo_import_batch SET status = 'failed', finished_at = now(),
+                             error = 'interrupted: the import process stopped before finishing (a later import repeats its steps)'
+                             WHERE status = 'running'""").rowcount
+    finally:
+        pg.execute("SELECT pg_advisory_unlock(hashtext('core.holoo_import'))")
+
+
 def run_queued(pg_dsn: str, upload_dir: str, workdir: str, holoo_views: bool = True) -> dict | None:
     """Run the oldest queued import (uploaded from the application). A queued batch whose file is gone is closed as failed."""
     with psycopg.connect(pg_dsn, autocommit=True) as pg:
+        if close_stale(pg) < 0:
+            return None                                             # another worker is importing
         row = pg.execute("""SELECT id, input_files[1], triggered_by FROM core.holoo_import_batch WHERE status = 'queued' ORDER BY id LIMIT 1""").fetchone()
     if not row:
         return None

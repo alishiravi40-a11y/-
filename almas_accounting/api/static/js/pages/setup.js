@@ -3,6 +3,7 @@ import {$, $$, card, ctx, esc, msg, one, op, table, can, printHead} from '../cor
 import {action} from './documents.js';
 
 const refresh = () => window.dispatchEvent(new Event('almas:refresh'));
+const back = () => location.hash === '#/setup' ? refresh() : (location.hash = '#/setup');   // same address: re-draw
 const COMPANY = [['company_title', 'نام شرکت یا فروشگاه'], ['company_national_id', 'شناسه ملی'], ['company_economic_code', 'کد اقتصادی'],
                  ['company_phone', 'تلفن'], ['company_address', 'نشانی']];
 
@@ -25,18 +26,18 @@ export default {
         action('wsave', 'wmsg', async () => {
           await op('setup.warehouse_save', {p_warehouse: w && w.warehouse_id || null, p_code: $('#wcode').value || null, p_name: $('#wname').value,
                                             p_active: $('#wactive') ? $('#wactive').checked : true});
-          location.hash = '#/setup';
+          back();
         });
         action('csave', 'cmsg', async () => {
           await op('setup.cashbox_save', {p_cashbox: c && c.cashbox_id || null, p_name: $('#cname').value, p_cash_account_code: $('#ccash').value.trim(),
                                           p_cheque_account_code: $('#ccheque').value.trim() || null});
-          location.hash = '#/setup';
+          back();
         });
         action('bsave', 'bmsg', async () => {
           await op('setup.bank_account_save', {p_bank_account: b && b.bank_account_id || null, p_bank_code: $('#bbank').value, p_account_no: $('#bno').value,
             p_title: $('#btitle').value, p_gl_account_code: $('#bgl').value.trim(), p_collection_account_code: $('#bcol').value.trim() || null,
             p_payable_cheque_account_code: $('#bpay').value.trim() || null, p_fee_account_code: $('#bfee').value.trim() || null, p_is_pos: $('#bpos').checked});
-          location.hash = '#/setup';
+          back();
         });
       };
       const may = can('setup.warehouse_save'), f = (id, label, v, size = 14, extra = '') => `<label>${label} <input id="${id}" value="${esc(v ?? '')}" size="${size}" ${extra}></label>`;

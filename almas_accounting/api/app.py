@@ -340,15 +340,18 @@ def run_operation(user: str, operation: str, call_args: dict, note: str | None =
             c.execute("SELECT core.require_operation(%s, %s)", (user, operation))
         except psycopg.errors.InsufficientPrivilege as e:
             raise HTTPException(403, str(e).split("\n")[0])
-        names = c.execute("""SELECT p.proargnames, p.pronargs, p.proretset, pg_get_function_identity_arguments(p.oid)
+        names = c.execute("""SELECT p.proargnames, p.pronargs, p.proretset, pg_get_function_identity_arguments(p.oid),
+                                    ARRAY(SELECT format_type(t, NULL) FROM unnest(p.proargtypes::oid[]) t)
                              FROM pg_proc p WHERE p.oid = to_regprocedure(%s)""", (sig,)).fetchone()
         argnames = [n for n in (names[0] or [])][: names[1]]
+        argtypes = dict(zip(argnames, names[4]))
         bad = set(body.args) - set(argnames)
         if bad:
             raise HTTPException(422, f"unknown argument(s) {sorted(bad)}; expected {argnames}")
         if set(body.args) & ACTOR_PARAMS:
             raise HTTPException(422, "the acting user is set by the API, not by the caller")
-        args = {k: (Jsonb(v) if isinstance(v, (dict, list)) else v) for k, v in body.args.items()}   # JSON → jsonb
+        # JSON → jsonb only where the parameter is json / jsonb; a list for an array parameter (date[], bigint[]) stays an array
+        args = {k: (Jsonb(v) if isinstance(v, (dict, list)) and argtypes.get(k) in ("jsonb", "json") else v) for k, v in body.args.items()}
         for a in argnames:
             if a in ACTOR_PARAMS:
                 args[a] = user
@@ -366,6 +369,8 @@ def run_operation(user: str, operation: str, call_args: dict, note: str | None =
             raise HTTPException(403, str(e).split("\n")[0])
         except (psycopg.errors.RaiseException, psycopg.errors.IntegrityError, psycopg.errors.DataError) as e:
             raise HTTPException(400, str(e).split("\n")[0])
+        except psycopg.errors.ProgrammingError as e:                   # e.g. an argument of the wrong type: the caller's error, not the server's
+            raise HTTPException(422, str(e).split("\n")[0])
         return {"operation": operation, "kind": kind, "rows": result}
 
 
@@ -412,11 +417,13 @@ def upload_dir() -> str:
 @app.post("/files/holoo_backup")
 async def upload_holoo_backup(request: Request, name: str, user: str = Depends(authenticate)):
     import re
+    from migration import import_backup
     with psycopg.connect(dsn(), autocommit=True) as c:             # refuse early: permission, and one import at a time
         try:
             c.execute("SELECT core.require_operation(%s, 'imports.queue')", (user,))
         except psycopg.errors.InsufficientPrivilege as e:
             raise HTTPException(403, str(e).split("\n")[0])
+        import_backup.close_stale(c)                                # a batch left «running» by a restarted server does not block
         if c.execute("SELECT EXISTS (SELECT 1 FROM core.holoo_import_batch WHERE status IN ('queued', 'running'))").fetchone()[0]:
             raise HTTPException(409, "یک ورود Backup در صف یا در حال اجراست؛ پس از پایان آن دوباره بفرستید")
     base = re.sub(r"[^A-Za-z0-9._-]", "_", os.path.basename(name))[-80:] or "backup.bak"

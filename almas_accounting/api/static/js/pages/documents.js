@@ -1,4 +1,4 @@
-import {$, $$, card, ctx, dateInput, esc, fmt, latin, lookup, msg, num, one, op, options, picked, readDate, table} from '../core.js';
+import {$, $$, card, ctx, dateInput, esc, fmt, latin, lookup, msg, num, one, op, options, picked, readDate, table, can} from '../core.js';
 
 // a button that cannot be pressed twice while its request runs (no double posting)
 export function action(id, msgId, fn) {
@@ -34,7 +34,8 @@ async function invoiceForm(kind) {
     action('isave', 'imsg', async () => {
       if (!picked.iparty || !lines.length) throw new Error((sale ? 'مشتری' : 'تأمین‌کننده') + ' و دست‌کم یک ردیف لازم است.');
       const date = readDate('idate'), paid = num('ipaid') || 0;
-      const pay = paid > 0 ? [{method: 'cash', account_id: Number($('#icash').value), amount: paid}] : [];
+      const acc = cash.find(m => m.account_id === Number($('#icash').value));      // the method follows the chosen box or bank account
+      const pay = paid > 0 ? [{method: acc && acc.kind === 'bank' ? 'bank' : 'cash', account_id: acc.account_id, amount: paid}] : [];
       const body = lines.map(({item_id, warehouse_id, quantity, unit_price, discount}) => ({item_id, warehouse_id, quantity, unit_price, discount}));
       let id;
       if (sale) {
@@ -68,7 +69,7 @@ async function invoiceForm(kind) {
       <button class="btn" id="iadd">افزودن ردیف</button></div>
     <div id="ilines"></div>
     <div class="row"><label>${sale ? 'دریافت همان لحظه' : 'پرداخت همان لحظه'} (ریال) <input id="ipaid" inputmode="numeric" value="0" size="14"></label>
-      <label>${sale ? 'به' : 'از'} <select id="icash">${options(cash, 'account_id', 'name')}</select></label>
+      <label>${sale ? 'به' : 'از'} <select id="icash">${options(cash.map(m => ({...m, label: `${m.name} (${m.kind === 'cash' ? 'صندوق' : 'بانک'})`})), 'account_id', 'label')}</select></label>
       <button class="btn primary" id="isave">ثبت نهایی فاکتور</button></div>
     <div id="imsg"></div>`);
 }
@@ -146,6 +147,13 @@ export default {
           $('#tsub').innerHTML = table(rows.map(r => ({...r, act: (Number(r.open_debit) > 0 && Number(r.open_credit) > 0)
               ? `<button class="btn" data-fifo="${r.account_id}">تطبیق خودکار</button>` : '—'})),
             [['account_code', 'حساب'], ['account_name', 'نام حساب'], ['balance', 'مانده'], ['open_debit', 'بدهی باز'], ['open_credit', 'بستانکار باز'], ['act', '', 'html']]);
+          const sets = await op('ar.settlements', {p_party: pid});
+          const M = {legacy_fifo: 'خودکار (انتقال از هلو)', fifo: 'خودکار', manual: 'دستی'};
+          $('#tsets').innerHTML = sets.length ? '<h3>تخصیص‌های فعلی</h3>' + table(sets.map(x => ({...x, m: M[x.method] || x.method,
+              undo: can('ar.unallocate') ? `<button class="btn" data-unset="${x.settlement_id}">برگرداندن</button>` : ''})),
+            [['debit_date', 'تاریخ بدهی'], ['debit_voucher', 'سند بدهی'], ['credit_date', 'تاریخ پرداخت'], ['credit_voucher', 'سند پرداخت'], ['amount', 'مبلغ'], ['m', 'روش'], ['undo', '', 'html']]) : '';
+          $$('[data-unset]').forEach(b => b.onclick = async () => { const why = prompt('علت برگرداندن این تخصیص:'); if (!why) return;
+            try { await op('ar.unallocate', {p_id: Number(b.dataset.unset), p_reason: why}); msg('tmsg', 'تخصیص برگشت خورد.', true); show(pid); } catch (e) { msg('tmsg', esc(e.message)); } });
           $$('[data-fifo]').forEach(b => b.onclick = async () => { try {
             const n = one(await op('ar.allocate_fifo', {p_account: Number(b.dataset.fifo), p_party: pid}));
             msg('tmsg', `${fmt(n)} تخصیص ثبت شد.`, true); show(pid); } catch (e) { msg('tmsg', esc(e.message)); } });
@@ -153,7 +161,7 @@ export default {
         action('tshow', 'tmsg', async () => { if (!picked.tparty) throw new Error('شخص را از فهرست انتخاب کنید.'); await show(picked.tparty); });
         if (p.party) show(Number(p.party));
       };
-      return card('', `<div class="row"><label>شخص <input id="tparty" size="28"></label><button class="btn" id="tshow">نمایش</button></div><div id="tsub"></div><div id="tmsg"></div>
+      return card('', `<div class="row"><label>شخص <input id="tparty" size="28"></label><button class="btn" id="tshow">نمایش</button></div><div id="tsub"></div><div id="tmsg"></div><div id="tsets"></div>
         <p class="muted">تطبیق، دریافت‌ها و بستانکاری‌های باز را به ترتیب قدیمی‌ترین بدهی تخصیص می‌دهد. هر تخصیص با علت قابل برگشت است.</p>`);
     }
   }
