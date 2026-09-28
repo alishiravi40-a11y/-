@@ -10,6 +10,7 @@ import re
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from . import names
 from .sqlserver import query
 
 SECRET_COL = re.compile(r"pas+word|pwd", re.I)
@@ -76,7 +77,9 @@ def nonempty_tables(conn) -> list[tuple[str, int]]:
     return [(t, int(n)) for t, n in rows]
 
 
-def extract_table(conn, table: str, out_dir: str) -> dict:
+def extract_table(conn, table: str, out_dir: str, name: str | None = None) -> dict:
+    """Extract `table` (the database's own spelling) into `<name>.parquet` (the Reader's name, names.py)."""
+    name = name or table
     cols = _columns(conn, table)
     keep = [(c, t) for c, t in cols if not SECRET_COL.search(c)]
     dropped = [c for c, _ in cols if SECRET_COL.search(c)]
@@ -91,7 +94,7 @@ def extract_table(conn, table: str, out_dir: str) -> dict:
     fields += [pa.field("_row_hash", pa.string())]
     schema = pa.schema(fields)
     blob_schema = pa.schema([("_row_hash", pa.string()), ("column", pa.string()), ("sha256", pa.string()), ("data", pa.binary())])
-    path = os.path.join(out_dir, f"{table}.parquet")
+    path = os.path.join(out_dir, f"{name}.parquet")
     writer = pq.ParquetWriter(path, schema)
     blob_writer = None
     n = 0
@@ -118,15 +121,17 @@ def extract_table(conn, table: str, out_dir: str) -> dict:
         writer.write_table(pa.table({f.name: pa.array(data[f.name], type=f.type) for f in fields}, schema=schema))
         if blobs["data"]:
             if blob_writer is None:
-                blob_writer = pq.ParquetWriter(os.path.join(out_dir, f"{table}__blobs.parquet"), blob_schema)
+                blob_writer = pq.ParquetWriter(os.path.join(out_dir, f"{name}__blobs.parquet"), blob_schema)
             blob_writer.write_table(pa.table(blobs, schema=blob_schema))
         n += len(batch)
     writer.close()
     if blob_writer:
         blob_writer.close()
-    return {"table": table, "rows": n, "dropped_secret_columns": dropped, "blob_columns": blob_cols}
+    return {"table": name, "rows": n, "dropped_secret_columns": dropped, "blob_columns": blob_cols,
+            **({"source_table": table} if name != table else {})}
 
 
 def extract_all(conn, out_dir: str) -> list[dict]:
     os.makedirs(out_dir, exist_ok=True)
-    return [extract_table(conn, t, out_dir) for t, _ in nonempty_tables(conn)]
+    name_map, _ = names.table_names(conn)                          # the same mapping the profile used
+    return [extract_table(conn, t, out_dir, name_map.get(t, t)) for t, _ in nonempty_tables(conn)]

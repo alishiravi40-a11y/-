@@ -5,6 +5,7 @@ import hashlib
 import json
 import re
 
+from . import names
 from .sqlserver import query
 
 KEY_TABLES = ["SANAD", "SND_LIST", "SND_INDX", "SARFASL", "CUSTOMER", "FACTURE", "FACTART", "ARTICLE",
@@ -24,13 +25,22 @@ REQUIRED = {
 }
 
 
-def schema_snapshot(conn) -> dict[str, list[tuple[str, str]]]:
+def schema_snapshot(conn, name_map: dict[str, str] | None = None) -> dict[str, list[tuple[str, str]]]:
+    """Tables and their columns, keyed by the Reader's table name (names.py: case-only differences under a
+    case-insensitive collation). Column names are kept exactly as the database has them."""
     _, rows = query(conn, """SELECT t.name, c.name, ty.name FROM sys.tables t JOIN sys.columns c ON c.object_id = t.object_id
                              JOIN sys.types ty ON ty.user_type_id = c.user_type_id ORDER BY t.name, c.column_id""")
+    name_map = name_map or {}
     snap: dict[str, list[tuple[str, str]]] = {}
     for t, c, ty in rows:
-        snap.setdefault(t, []).append((c, ty))
+        snap.setdefault(name_map.get(t, t), []).append((c, ty))
     return snap
+
+
+def missing_required(snap: dict) -> dict[str, list[str]]:
+    """Required columns absent from the snapshot (exact column names), per table."""
+    missing = {t: [c for c in cols if c not in {x[0] for x in snap.get(t, [])}] for t, cols in REQUIRED.items()}
+    return {t: m for t, m in missing.items() if m}
 
 
 def fingerprint(snap: dict) -> str:
@@ -39,9 +49,9 @@ def fingerprint(snap: dict) -> str:
 
 
 def detect(conn, backup_meta: dict | None = None) -> dict:
-    snap = schema_snapshot(conn)
-    missing = {t: [c for c in cols if c not in {x[0] for x in snap.get(t, [])}] for t, cols in REQUIRED.items()}
-    missing = {t: m for t, m in missing.items() if m}
+    name_map, coll = names.table_names(conn)
+    snap = schema_snapshot(conn, name_map)
+    missing = missing_required(snap)
     _, v = query(conn, "SELECT TOP 1 RTRIM(Number) FROM Process WHERE RTRIM(KindProc) = 'L' AND Number LIKE '1[34]__.__.__%' ORDER BY ID DESC") \
         if "Process" in snap else (None, [])
     holoo_version = v[0][0] if v else None
@@ -69,5 +79,7 @@ def detect(conn, backup_meta: dict | None = None) -> dict:
         "fiscal_year_from_path": int(m.group(1)) if m else None,
         "date_range": [str(first), str(last)],
         "tables_total": len(snap),
+        "collation": coll,
+        "table_name_case_map": name_map,                            # e.g. {"Check_event": "Check_Event"}: recorded, never silent
         "adapter": "holoo_v1" if not missing else None,
     }
