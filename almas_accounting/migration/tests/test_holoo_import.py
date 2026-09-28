@@ -55,10 +55,10 @@ def backup_v2():
     return b
 
 
-def silver(path, run, data):
+def silver(path, run, data, db=DB):
     con = duckdb.connect(str(path))
     con.execute("CREATE TABLE meta (key VARCHAR, value VARCHAR)")
-    con.executemany("INSERT INTO meta VALUES (?, ?)", [("run_id", run), ("source_db", DB), ("fiscal_year", "1404"), ("backup_sha256", run * 4)])
+    con.executemany("INSERT INTO meta VALUES (?, ?)", [("run_id", run), ("source_db", db), ("fiscal_year", "1404"), ("backup_sha256", run * 4)])
     for t, cols in COLS.items():
         con.execute(f"CREATE TABLE {t} ({', '.join(f'{c} {ty}' for c, ty in cols)}, source_row_hash VARCHAR)")
         for r in data[t]:
@@ -76,9 +76,9 @@ def imp(db, tmp_path):
     db.execute("INSERT INTO core.app_user (username) VALUES ('boss'), ('clerk')")
     db.execute("INSERT INTO core.user_permission (username, permission, granted_by) VALUES ('boss', 'holoo.import', 't')")
 
-    def publish(run, data):
+    def publish(run, data, db=DB):
         f = tmp_path / f"{run}.duckdb"                                         # the same backup again → the same Silver file
-        return publish_pg.publish(str(f) if f.exists() else silver(f, run, data), DSN)
+        return publish_pg.publish(str(f) if f.exists() else silver(f, run, data, db), DSN)
 
     def batch(**kw):
         cols = {"triggered_by": "t", "input_files": ["x.bak"], "source_db": DB, "fiscal_year": "1404", **kw}
@@ -259,3 +259,52 @@ def test_a_batch_left_running_by_a_dead_server_does_not_block_the_next_upload(db
         live = batch(status="running")
         assert import_backup.close_stale(db) == -1
         assert db.execute("SELECT status FROM core.holoo_import_batch WHERE id = %s", (live,)).fetchone()[0] == "running"
+
+
+
+def next_year(closing_a1=9, closing_b1=4):
+    """The following Holoo year: its opening stock (first_qty) is the closing of the first year (as in the real FY1405 backup)."""
+    return {
+        "warehouse": [("1", "central"), ("2", "shop")],
+        "item": [("A1", "phone", "phone", False, "1", closing_a1, 100, closing_a1 - 1, 100), ("A2", "phone", "phone", False, "2", 2, 100, 2, 100),
+                 ("B1", "tv", "tv", False, "1", closing_b1, 50, closing_b1, 50)],
+        "voucher": [(1, 1, dt.date(2026, 3, 21), "opening")],
+        "document": [("F", "1", dt.date(2026, 4, 2), "10:00", 1, 0, None)],
+        "document_line": [("F", "1", "A1", 0, 1, 150, 100)],
+        "cheque": [], "cheque_event": [], "tax_submission": [],
+    }
+
+
+def test_the_next_years_opening_continues_the_kardex_and_is_not_counted_twice(db, imp):
+    publish, _ = imp
+    from migration import holoo_ledger
+    holoo_ledger.ensure_fiscal_year(db, "1405")
+    publish("y1", backup_v1()); holoo_inventory.migrate(db, DB)
+    assert stock(db) == {"A1": 9, "A2": 2, "B1": 4}
+    publish("y2", next_year(), db="hy")
+    st = holoo_inventory.migrate(db, "hy")
+    assert (st["openings"], st["openings_carried_forward"], st["openings_qty_differs"]) == (0, 3, 0)
+    q = dict(db.execute("""SELECT l.legacy_code, sum(CASE WHEN m.kind IN ('opening','purchase','sale_return','transfer_in') THEN m.qty ELSE -m.qty END)
+                           FROM core.item_legacy_code l JOIN core.stock_movement_live m ON m.item_id = l.item_id AND m.warehouse_id = l.warehouse_id
+                           WHERE l.source_db = 'hy' GROUP BY 1""").fetchall())
+    assert q == {"A1": 8, "A2": 2, "B1": 4}                                        # 9 carried + one sale, not 18
+    p2 = holoo_inventory.parity(db, "hy", "2027-03-20")
+    assert p2["stock_qty_equal"] == p2["item_codes"] == 3
+    p1 = holoo_inventory.parity(db, DB, "2026-03-20")                              # the first year still reconciles at its own year end
+    assert p1["stock_qty_equal"] == p1["item_codes"] == 3
+    assert db.execute("SELECT count(*) FROM core.legacy_opening_check WHERE status = 'carried_forward'").fetchone()[0] == 3
+
+
+def test_an_opening_that_does_not_continue_the_previous_closing_is_listed_not_guessed(db, imp):
+    publish, _ = imp
+    from migration import holoo_ledger
+    holoo_ledger.ensure_fiscal_year(db, "1405")
+    publish("y1", backup_v1()); holoo_inventory.migrate(db, DB)
+    publish("y2", next_year(closing_b1=7), db="hy")
+    st = holoo_inventory.migrate(db, "hy")
+    assert st["openings_qty_differs"] == 1 and st["openings"] == 0
+    row = db.execute("SELECT legacy_code, holoo_qty, core_qty FROM core.legacy_opening_check WHERE status = 'qty_differs'").fetchone()
+    assert row == ("B1", 7, 4)
+    assert {r[1]: r[4] for r in db.execute("SELECT * FROM core.control_inbox('2026-09-01')")}["INV-OPEN"] == 1
+    p2 = holoo_inventory.parity(db, "hy", "2027-03-20")
+    assert p2["stock_qty_equal"] == 2                                             # B1 differs and is shown, not patched

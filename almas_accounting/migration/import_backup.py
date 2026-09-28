@@ -111,10 +111,12 @@ def reconcile(pg, source_db: str, fiscal_year: str) -> dict:
     inv = holoo_inventory.parity(pg, source_db, str(ye))
     dup = pg.execute("""SELECT count(*) FROM (SELECT split_part(source_ref, '@', 1) FROM core.stock_movement_live
                         WHERE legacy AND source_ref LIKE %s GROUP BY 1 HAVING count(*) > 1) d""", (f"holoo:{source_db}:%",)).fetchone()[0]
-    ok = inv.get("stock_qty_equal", 0) == inv.get("item_codes", 0) and dup == 0
+    carry = dict(pg.execute("SELECT status, count(*) FROM core.legacy_opening_check WHERE source_db = %s GROUP BY 1", (source_db,)).fetchall())
+    ok = inv.get("stock_qty_equal", 0) == inv.get("item_codes", 0) and dup == 0 and not carry.get("qty_differs")
     r["inventory"] = {"status": "pass" if ok else "fail", "item_codes": inv.get("item_codes", 0), "stock_qty_equal": inv.get("stock_qty_equal", 0),
                       "avg_cost_equal": inv.get("avg_cost_equal", 0), "item_codes_in_stock": inv.get("item_codes_in_stock", 0),
-                      "valuation_difference": inv["valuation_difference"], "lines_counted_twice": dup}
+                      "valuation_difference": inv["valuation_difference"], "lines_counted_twice": dup,
+                      "opening_carried_forward": carry.get("carried_forward", 0), "opening_qty_differs": carry.get("qty_differs", 0)}
     c = pg.execute("""SELECT (SELECT count(*) FROM holoo_mirror.cheque WHERE source_db = %(db)s AND removed_run IS NULL),
                              (SELECT count(*) FROM core.cheque WHERE legacy_source_db = %(db)s),
                              (SELECT count(*) FROM core.cheque k WHERE k.legacy_source_db = %(db)s AND NOT EXISTS (

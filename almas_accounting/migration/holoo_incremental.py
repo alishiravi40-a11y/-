@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 
-from migration.holoo_inventory import KIND, USER
+from migration.holoo_inventory import KIND, USER, openings
 
 
 def _bases(conn, db: str, run: str) -> list[str]:
@@ -44,14 +44,8 @@ def inventory(conn, db: str, run: str) -> dict:
             AND m.source_ref <> split_part(m.source_ref, '@', 1) || '@' || %(run)s          -- already re-entered by this run: re-running it is a no-op
           """, {"b": bases, "u": USER, "run": run}).rowcount
         y0 = conn.execute("SELECT min(doc_date) FROM holoo_mirror.voucher WHERE source_db = %s AND state = 'opening'", (db,)).fetchone()[0]
-        opening = conn.execute("""
-          INSERT INTO core.stock_movement (item_id, warehouse_id, kind, effective_date, qty, unit_price, source, source_ref, legacy, created_by)
-          SELECT m.item_id, m.warehouse_id, 'opening', %(y0)s, i.first_qty, coalesce(i.first_unit_cost, 0), 'holoo',
-                 'holoo:' || i.source_db || ':opening:' || i.a_code || '@' || %(run)s, true, %(u)s
-          FROM holoo_mirror.item i JOIN core.item_legacy_code m ON m.source_db = i.source_db AND m.legacy_code = i.a_code
-          WHERE i.source_db = %(db)s AND i.removed_run IS NULL AND NOT i.is_service AND coalesce(i.first_qty, 0) <> 0
-            AND 'holoo:' || i.source_db || ':opening:' || i.a_code = ANY (%(b)s)
-          ON CONFLICT DO NOTHING""", {"db": db, "y0": y0, "run": run, "b": bases, "u": USER}).rowcount
+        # the same rule as the first import: re-entered, or re-checked against the previous year's closing (core 032)
+        opening = openings(conn, db, y0, run, [b for b in bases if ":opening:" in b])["recorded"]
         lines = conn.execute("""
           INSERT INTO core.stock_movement (item_id, warehouse_id, kind, effective_date, effective_time, qty, unit_price, extra_cost_per_unit, transfer_id,
                                            source, source_ref, legacy, created_by)

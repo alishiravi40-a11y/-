@@ -16,6 +16,39 @@ KIND = {"K": "purchase", "F": "sale", "Y": "sale_return", "X": "purchase_return"
 USER = "holoo-migration"
 
 
+def openings(conn, db: str, y0, run: str | None = None, only: list[str] | None = None) -> dict:
+    """Opening stock of a Holoo year (core 032). Without earlier core history of the item in that warehouse it is an opening
+    movement; with it (the previous year was imported) the opening is the previous closing: checked, never added twice.
+    `only`: base references to handle (incremental re-entry, with the '@run' suffix on new movements)."""
+    out = collections.Counter()
+    rows = conn.execute("""
+      SELECT i.a_code, m.item_id, m.warehouse_id, i.first_qty, coalesce(i.first_unit_cost, 0)
+      FROM holoo_mirror.item i JOIN core.item_legacy_code m ON m.source_db = i.source_db AND m.legacy_code = i.a_code
+      WHERE i.source_db = %(db)s AND i.removed_run IS NULL AND NOT i.is_service AND coalesce(i.first_qty, 0) <> 0
+        AND (%(only)s::text[] IS NULL OR 'holoo:' || i.source_db || ':opening:' || i.a_code = ANY (%(only)s))""", {"db": db, "only": only}).fetchall()
+    for code, item, wh, qty, cost in rows:
+        ref = f"holoo:{db}:opening:{code}"
+        prior = conn.execute("""SELECT EXISTS (SELECT 1 FROM core.stock_movement_live WHERE item_id = %s AND warehouse_id IS NOT DISTINCT FROM %s
+                                AND effective_date < %s AND split_part(coalesce(source_ref, ''), '@', 1) <> %s)""", (item, wh, y0, ref)).fetchone()[0]
+        if not prior:
+            out["recorded"] += conn.execute("""INSERT INTO core.stock_movement (item_id, warehouse_id, kind, effective_date, qty, unit_price, source,
+                                               source_ref, legacy, created_by) VALUES (%s, %s, 'opening', %s, %s, %s, 'holoo', %s, true, %s)
+                                               ON CONFLICT DO NOTHING""", (item, wh, y0, qty, cost, ref + (f"@{run}" if run else ""), USER)).rowcount
+            continue
+        last = conn.execute("""SELECT qty_after, avg_cost_after FROM core.item_kardex(%s, %s::date - 1) WHERE warehouse_id IS NOT DISTINCT FROM %s
+                               ORDER BY effective_date DESC, effective_time DESC, movement_id DESC LIMIT 1""", (item, y0, wh)).fetchone() or (0, None)
+        status = "carried_forward" if abs(float(last[0]) - float(qty)) < 0.001 else "qty_differs"
+        conn.execute("""INSERT INTO core.legacy_opening_check (source_db, legacy_code, item_id, warehouse_id, opening_date, holoo_qty, holoo_unit_cost,
+                                                              core_qty, core_avg_cost, status, run_id)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (source_db, legacy_code) DO UPDATE SET holoo_qty = EXCLUDED.holoo_qty, holoo_unit_cost = EXCLUDED.holoo_unit_cost,
+                          core_qty = EXCLUDED.core_qty, core_avg_cost = EXCLUDED.core_avg_cost, status = EXCLUDED.status, run_id = EXCLUDED.run_id,
+                          opening_date = EXCLUDED.opening_date, checked_at = now()""",
+                     (db, code, item, wh, y0, qty, cost, last[0], last[1], status, run))
+        out[status] += 1
+    return {"recorded": out["recorded"], "carried_forward": out["carried_forward"], "qty_differs": out["qty_differs"]}
+
+
 def migrate(conn, db: str) -> dict:
     st = collections.Counter()
     with conn.transaction():
@@ -31,11 +64,10 @@ def migrate(conn, db: str) -> dict:
             LEFT JOIN core.warehouse w ON w.holoo_group_code = i.warehouse_code
             WHERE i.source_db = %s AND i.removed_run IS NULL ON CONFLICT DO NOTHING""", (db,)).rowcount
         y0 = conn.execute("""SELECT min(doc_date) FROM holoo_mirror.voucher WHERE source_db = %s AND state = 'opening'""", (db,)).fetchone()[0]
-        st["openings"] = conn.execute("""INSERT INTO core.stock_movement (item_id, warehouse_id, kind, effective_date, qty, unit_price, source, source_ref, legacy, created_by)
-            SELECT m.item_id, m.warehouse_id, 'opening', %(y0)s, i.first_qty, coalesce(i.first_unit_cost, 0), 'holoo', 'holoo:' || i.source_db || ':opening:' || i.a_code, true, %(u)s
-            FROM holoo_mirror.item i JOIN core.item_legacy_code m ON m.source_db = i.source_db AND m.legacy_code = i.a_code
-            WHERE i.source_db = %(db)s AND i.removed_run IS NULL AND NOT i.is_service AND coalesce(i.first_qty, 0) <> 0
-            ON CONFLICT DO NOTHING""", {"db": db, "y0": y0, "u": USER}).rowcount
+        op = openings(conn, db, y0)
+        st["openings"] = op["recorded"]
+        st["openings_carried_forward"] = op["carried_forward"]
+        st["openings_qty_differs"] = op["qty_differs"]
         # transfer pairs: one id per (document, line) shared by its S and D lines
         st["movements"] = conn.execute("""INSERT INTO core.stock_movement (item_id, warehouse_id, kind, effective_date, effective_time, qty, unit_price,
                    extra_cost_per_unit, transfer_id, source, source_ref, legacy, created_by)
@@ -66,7 +98,7 @@ def parity(conn, db: str, year_end: str) -> dict:
         by_item[it].append((a, wh, float(q), float(c)))
     for it, codes in by_item.items():
         rows = conn.execute("""SELECT k.warehouse_id, k.kind, k.unit_cost, k.qty_after, k.avg_cost_after, s.source_ref
-                               FROM core.item_kardex(%s) k JOIN core.stock_movement s ON s.id = k.movement_id""", (it,)).fetchall()
+                               FROM core.item_kardex(%s, %s) k JOIN core.stock_movement s ON s.id = k.movement_id""", (it, year_end)).fetchall()
         last = {}
         for wh, kind, uc, qa, ac, ref in rows:
             last[wh] = (float(qa), float(ac))
