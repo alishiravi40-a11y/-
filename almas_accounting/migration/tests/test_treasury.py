@@ -262,3 +262,21 @@ def test_opening_position_of_a_continued_cheque_is_compared_rule_by_rule():
     assert m("V", "in", "28996", closed, (5, 9), prior="28996")
     assert not m("V", "in", "28996", closed, (5, 9), prior="28000") and not m("V", "in", "28996", closed, (5, 9), prior="")
     assert not m("V", "in", "28996", ("collected", None, None), (5, 9), prior="28996")
+
+
+def test_an_issued_cheque_continued_from_its_opening_sits_on_notes_payable(db, t):
+    """E31: an issued cheque that entered the core as an opening position («005» → notes payable) and is settled in the
+    next Holoo year must leave notes payable, not «005» (2 FY1405 vouchers debit 40200010031)."""
+    from migration.holoo_cheques import _seed
+    ids, p = t
+    if "005" not in ids:
+        ids["005"] = db.execute("""INSERT INTO core.account (code, name, level, is_leaf, nature, statement, requires_party)
+                                   VALUES ('005', 'opening balance', 1, true, 'credit', 'balance_sheet', false) RETURNING id""").fetchone()[0]
+    old, new = cheque(db, ids, None, direction="out", amount=700), cheque(db, ids, None, direction="out", amount=800)
+    event(db, old, "opening_position", ids["005"], None, ids["4020001"], None, day="2025-03-21")
+    event(db, new, "issued", ids["4020001"], None, ids["4010176"], p, day="2025-06-01")
+    db.execute("""INSERT INTO core.cheque_legacy_code (source_db, check_code, cheque_id, continued) VALUES ('y2', 1, %s, true), ('y2', 2, %s, true)""", (old, new))
+    db.cursor().executemany("INSERT INTO core.legacy_account_map (source_db, legacy_code, account_id, kind) VALUES ('y2', %s, %s, 'same_code')",
+                            [("005", ids["005"]), ("4020001", ids["4020001"])])
+    s = _seed(db, "y2")
+    assert s[1]["loc"] == "4020001" and s[2]["loc"] == "4020001"

@@ -196,7 +196,9 @@ def _seed(conn, db: str) -> dict:
                                          WHERE m.source_db = %s AND m.continued""", (db,)).fetchall():
         st = conn.execute("SELECT account_id, party_id FROM core.cheque_status WHERE cheque_id = %s", (cid,)).fetchone()
         if dirn == "out":                                            # an issued cheque sits on the notes-payable account of its bank
-            pay = conn.execute("""SELECT e.from_account_id FROM core.cheque_event e WHERE e.cheque_id = %s AND e.event_type IN ('issued', 'opening_position')
+            # issued: notes payable → party (from); opening_position: «005» → notes payable (to) — E31: 2 FY1405 vouchers
+            pay = conn.execute("""SELECT CASE WHEN e.event_type = 'opening_position' THEN e.to_account_id ELSE e.from_account_id END
+                                  FROM core.cheque_event e WHERE e.cheque_id = %s AND e.event_type IN ('issued', 'opening_position')
                                   ORDER BY e.effective_date DESC, e.id DESC LIMIT 1""", (cid,)).fetchone()
             loc = code(pay[0], None) if pay else None
             bank = conn.execute("""SELECT g.legacy_code FROM core.company_bank_account k JOIN core.legacy_account_map g ON g.source_db = %s AND g.account_id = k.gl_account_id
