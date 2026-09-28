@@ -85,3 +85,22 @@ def test_new_transfers_keep_the_model(db, inv):
     db.execute("INSERT INTO core.stock_movement (item_id, warehouse_id, kind, effective_date, qty, transfer_id, source, created_by, legacy) "
                "VALUES (%s, %s, 'transfer_out', '2026-04-02', 2, 8, 'test', 't', true)", (i, w["W1"]))
     assert db.execute("SELECT count(*) FROM core.inventory_cross_model_transfers").fetchone()[0] == 1
+
+
+def test_a_legacy_transfer_to_another_model_moves_at_the_source_average(db, inv):
+    """E31 / core 034: Holoo moved a few transfers from a code of one model to a code of another; the destination must
+    receive the source's average (as every Holoo transfer), not 0."""
+    w, i = inv
+    other = db.execute("INSERT INTO core.item (code, name, model_key) VALUES ('M2', 'other', 'other') RETURNING id").fetchone()[0]
+    mv(db, i, w["W1"], "opening", "2026-03-21", 4, 100)
+    mv(db, i, w["W1"], "purchase", "2026-04-01", 4, 300)                      # source average 200
+    mv(db, other, w["W2"], "opening", "2026-03-21", 2, 50)
+    mv(db, other, w["W2"], "transfer_in", "2026-04-02", 2, transfer=9, legacy=True)
+    mv(db, i, w["W1"], "transfer_out", "2026-04-02", 2, transfer=9, legacy=True)
+    k = kardex(db, other)
+    assert k[-1][2] == 200 and k[-1][4] == 125                                 # (2×50 + 2×200) / 4
+    assert kardex(db, i)[-1][3] == 6                                           # the source is replayed as before
+    # items passing goods back and forth on one day do not recurse without end
+    mv(db, i, w["W1"], "transfer_in", "2026-04-03", 1, transfer=10, legacy=True)
+    mv(db, other, w["W2"], "transfer_out", "2026-04-03", 1, transfer=10, legacy=True)
+    assert kardex(db, i)[-1][2] == 125 and len(kardex(db, other)) == 3
