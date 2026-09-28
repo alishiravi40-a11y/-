@@ -42,7 +42,7 @@ def migrate(conn, db: str) -> dict:
             SELECT m.item_id, m.warehouse_id, (%(kind)s::jsonb ->> d.fac_type), d.doc_date, coalesce(d.doc_time, '00:00')::time, l.qty,
                    CASE d.fac_type WHEN 'K' THEN l.unit_price WHEN 'Y' THEN l.unit_cost END,
                    CASE WHEN d.fac_type = 'K' AND coalesce(d.total_qty, 0) > 0 THEN coalesce(d.extra_cost, 0) / d.total_qty ELSE 0 END,
-                   CASE WHEN d.fac_type IN ('D', 'S') THEN dense_rank() OVER (ORDER BY CASE WHEN d.fac_type IN ('D', 'S') THEN d.fac_code END, l.line_index) END,
+                   CASE WHEN d.fac_type IN ('D', 'S') THEN core.legacy_transfer_id(l.source_db, d.fac_code, l.line_index) END,
                    'holoo', 'holoo:' || l.source_db || ':' || d.fac_type || ':' || d.fac_code || ':' || l.line_index, true, %(u)s
             FROM holoo_mirror.document_line l JOIN holoo_mirror.document d USING (source_db, fac_type, fac_code)
             JOIN core.item_legacy_code m ON m.source_db = l.source_db AND m.legacy_code = l.a_code
