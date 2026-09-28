@@ -248,3 +248,17 @@ def test_a_cheque_continued_into_the_next_year_starts_where_the_core_has_it(db):
     # without continuity (the old behaviour) the spent cheque had no holder and the return had no source
     old, _, _, _ = derive(db, S)
     assert all(t != "opening" for _, t, _, _ in old)
+
+
+def test_opening_position_of_a_continued_cheque_is_compared_rule_by_rule():
+    """core 033 / E31: the new year's opening of a cheque carried from an earlier Holoo year against the core's position."""
+    from migration.holoo_cheques import opening_matches as m
+    assert m("P", "out", "", ("issued", 1, None), None) and not m("P", "out", "", ("paid_by_bank", 1, None), None)
+    assert m("V", "in", "", ("collected", 1, None), None) and not m("V", "in", "", ("endorsed_to_party", 5, 9), None)
+    assert m("V", "in", "28996", ("endorsed_to_party", 5, 9), (5, 9)) and not m("V", "in", "28996", ("endorsed_to_party", 5, 9), (5, 8))
+    assert m("D", "in", "", ("received", 3, None), (3, None)) and not m("D", "in", "", ("returned_from_bank", 3, None), (4, None))
+    # spent before the first imported year: the core keeps only the state, the earlier Holoo year's counterparty decides
+    closed = ("endorsed_to_party", None, None)
+    assert m("V", "in", "28996", closed, (5, 9), prior="28996")
+    assert not m("V", "in", "28996", closed, (5, 9), prior="28000") and not m("V", "in", "28996", closed, (5, 9), prior="")
+    assert not m("V", "in", "28996", ("collected", None, None), (5, 9), prior="28996")

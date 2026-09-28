@@ -88,3 +88,21 @@ def test_other_fiscal_year_links_same_person_only_with_same_identity(db):
     same = db.execute("""SELECT count(DISTINCT party_id) FROM core.party_legacy_code WHERE legacy_code = '0001'""").fetchone()[0]
     diff = db.execute("""SELECT count(DISTINCT party_id) FROM core.party_legacy_code WHERE legacy_code = '0002'""").fetchone()[0]
     assert (same, diff) == (1, 2)
+
+
+def test_other_fiscal_year_links_legal_entity_id_only_with_same_name(db):
+    # E31: 428 FY1405 persons carry an ID that is not an 8–10 digit national code (e.g. an 11-digit legal-entity ID);
+    # the same code, the same recorded ID and the same name is the same person — a same ID with another name is not
+    db.execute(MIRROR); seed(db)
+    db.execute("""INSERT INTO holoo_mirror.person VALUES
+      ('holoo1_1404','0006','Legal Co','legalco','14011115760',NULL,NULL,'40101760003','h6',NULL),
+      ('holoo1_1404','0007','Other Co','otherco','14011115761',NULL,NULL,'40101760004','h7',NULL)""")
+    legacy.map_persons(db, "holoo1_1404")
+    db.execute("INSERT INTO holoo_mirror.import_run VALUES ('run1405', 'holoo1_1405')")
+    db.execute("""INSERT INTO holoo_mirror.person VALUES
+      ('holoo1_1405','0006','Legal Co','legalco','14011115760',NULL,NULL,'40101760003','x6',NULL),
+      ('holoo1_1405','0007','Renamed Co','renamedco','14011115761',NULL,NULL,'40101760004','x7',NULL)""")
+    st = legacy.map_persons(db, "holoo1_1405")
+    assert st["linked_other_year"] == 1 and st["parties_created"] == 1
+    n = dict(db.execute("SELECT legacy_code, count(DISTINCT party_id) FROM core.party_legacy_code GROUP BY 1").fetchall())
+    assert (n["0006"], n["0007"]) == (1, 2)

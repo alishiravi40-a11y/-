@@ -170,6 +170,22 @@ def derive(conn, db, seed: dict | None = None):
     return resolved, vtype, opening, checks
 
 
+
+def opening_matches(st, dirn, hacc, core, exp, prior=None) -> bool:
+    """Is a continued cheque's opening position in the new Holoo year where the core has it the day before?
+    st/dirn/hacc: Holoo state, direction and counterparty code; core: (state, account_id, party_id) from cheque_position_at;
+    exp: (account_id, party_id) of the Holoo position or None; prior: for a cheque the core knows only as closed before
+    migration (no events, no party), the counterparty the earlier Holoo year recorded for it (None otherwise)."""
+    if dirn == "out":
+        return (st == "P" and core[0] in ("issued", "opening_position")) or (st != "P" and core[0] in ("paid_by_bank", "settled_otherwise"))
+    if st == "V" and not hacc:                                   # collected before the year end
+        return core[0] in ("collected", "cashed")
+    if st == "V" and prior is not None:                          # spent before the first imported year (E31: 206 in FY1405)
+        return core[0] == "endorsed_to_party" and prior == hacc
+    if st == "V":                                                # spent: to the named party, or to «nobody» (W-32: the voucher decides)
+        return core[0] == "endorsed_to_party" and (exp is None or (exp[0], exp[1]) == (core[1], core[2]))
+    return exp is not None and (exp[0], exp[1]) == (core[1], core[2])
+
 def _seed(conn, db: str) -> dict:
     """Where the core has each cheque continued into `db` from an earlier year, in Holoo codes of `db` (core 033)."""
     code = lambda a, p: None if a is None else conn.execute(
@@ -271,14 +287,16 @@ def migrate(conn, db: str, user: str = "holoo-migration") -> dict:
             # the core's position at the end of the day before the new year's opening — not after the new year's events
             core = conn.execute("SELECT * FROM core.cheque_position_at(%s, %s::date - 1)", (ids[chk], e[3])).fetchone()
             exp = acc(expected) if expected else None
-            if dirn == "out":
-                same = (st == "P" and core[0] in ("issued", "opening_position")) or (st != "P" and core[0] in ("paid_by_bank", "settled_otherwise"))
-            elif st == "V" and not hacc:                            # collected before the year end
-                same = core[0] in ("collected", "cashed")
-            elif st == "V":                                          # spent: to the named party, or to «nobody» (W-32: the voucher decides)
-                same = core[0] == "endorsed_to_party" and (exp is None or (exp[0], exp[1]) == (core[1], core[2]))
-            else:
-                same = exp is not None and (exp[0], exp[1]) == (core[1], core[2])
+            prior = None
+            if st == "V" and hacc and core[0] == "endorsed_to_party" and core[1] is None and core[2] is None and not conn.execute(
+                    "SELECT 1 FROM core.cheque_event WHERE cheque_id = %s AND event_type IS NOT NULL LIMIT 1", (ids[chk],)).fetchone():
+                # spent before the first imported year: the earlier Holoo year's own counterparty for this cheque
+                prior = conn.execute("""SELECT btrim(e.account_code) FROM core.cheque_legacy_code l
+                                        JOIN holoo_mirror.cheque_event e ON e.source_db = l.source_db AND e.check_code = l.check_code AND e.removed_run IS NULL
+                                        WHERE l.cheque_id = %s AND l.source_db <> %s AND e.state = 'V'
+                                        ORDER BY e.event_date DESC, e.event_id DESC LIMIT 1""", (ids[chk], db)).fetchone()
+                prior = prior[0] if prior else ""
+            same = opening_matches(st, dirn, hacc, core, exp, prior)
             conn.execute("""INSERT INTO core.legacy_cheque_opening_check (source_db, check_code, cheque_id, holoo_state, holoo_account_id, holoo_party_id,
                                                                      core_state, core_account_id, core_party_id, status)
                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
