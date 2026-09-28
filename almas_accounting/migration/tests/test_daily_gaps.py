@@ -167,3 +167,28 @@ def test_statement_file_reader_csv_xlsx_and_errors():
         SF.read_statement("a,b\n1,2\n".encode(), "x.csv")
     with pytest.raises(SF.StatementError, match="عدد نیست"):
         SF.read_statement("تاریخ,واریز,برداشت\n1405/01/12,abc,\n".encode(), "x.csv")
+
+
+def test_waste_leaves_at_moving_average_with_the_holoo_voucher_and_is_reversed_with_its_stock(setup):
+    db = setup["db"]
+    acct(db, "8", "خرید", None, 1, False, "debit", statement="income_statement"); acct(db, "8010001", "خرید کالا", "8", 2, statement="income_statement")
+    acct(db, "6", "هزینه", None, 1, False, "debit", statement="income_statement"); acct(db, "6010006", "ضایعات", "6", 2, statement="income_statement")
+    w = one(db, "SELECT id FROM core.warehouse LIMIT 1") if one(db, "SELECT count(*) FROM core.warehouse") else one(db, "INSERT INTO core.warehouse (code, name) VALUES ('W1', 'مرکزی') RETURNING id")
+    item = one(db, "INSERT INTO core.item (code, name, model_key) VALUES ('P9', 'کالا', 'k9') RETURNING id")
+    with db.transaction():
+        db.execute("""INSERT INTO core.stock_movement (item_id, warehouse_id, kind, effective_date, qty, unit_price, source, created_by)
+                      VALUES (%s, %s, 'opening', '2026-03-21', 4, 100, 'test', 't'), (%s, %s, 'purchase', '2026-04-01', 4, 200, 'test', 't')""", (item, w, item, w))
+    mid = one(db, "SELECT core.stock_waste(%s, %s, 2, '2026-04-05', 'شکسته در حمل', 'acc')", item, w)
+    lines = db.execute("""SELECT a.code, l.debit, l.credit FROM core.document_posting d JOIN core.journal_line l ON l.entry_id = d.entry_id
+                          JOIN core.account a ON a.id = l.account_id WHERE d.source = 'waste' AND d.source_ref = %s ORDER BY 1""", (str(mid),)).fetchall()
+    assert lines == [("6010006", 300, 0), ("8010001", 0, 300)]                   # 2 × average 150
+    assert one(db, "SELECT qty FROM core.inventory_valuation('2026-12-31') WHERE item_id = %s", item) == 6
+    with pytest.raises(Raised, match="برگشت ضایعات"):
+        db.execute("SELECT core.journal_reverse((SELECT entry_id FROM core.document_posting WHERE source = 'waste'), '2026-04-06', 'اشتباه', 'acc')")
+    with pytest.raises(Raised, match="negative"):
+        db.execute("SELECT core.stock_waste(%s, %s, 99, '2026-04-05', 'بیش از موجودی', 'acc')", (item, w))
+    db.execute("SELECT core.stock_waste_reverse(%s, '2026-04-06', 'اشتباه در شمارش', 'acc')", (mid,))
+    assert one(db, "SELECT qty FROM core.inventory_valuation('2026-12-31') WHERE item_id = %s", item) == 8
+    assert one(db, "SELECT coalesce(sum(debit - credit), 0) FROM core.journal_line l JOIN core.account a ON a.id = l.account_id WHERE a.code = '6010006'") == 0
+    with pytest.raises(Raised, match="قبلاً برگشت"):
+        db.execute("SELECT core.stock_waste_reverse(%s, '2026-04-06', 'دوباره', 'acc')", (mid,))

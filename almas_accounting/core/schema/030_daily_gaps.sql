@@ -375,7 +375,8 @@ CREATE OR REPLACE FUNCTION core.item_detail(p_item int) RETURNS jsonb LANGUAGE s
               FROM last l JOIN core.warehouse w ON w.id = l.warehouse_id WHERE l.qty_after <> 0),
     'movements', (SELECT coalesce(jsonb_agg(jsonb_build_object('date', k.effective_date, 'kind', k.kind, 'warehouse', (SELECT name FROM core.warehouse WHERE id = k.warehouse_id),
                                                                'qty', k.qty, 'unit_cost', round(k.unit_cost), 'qty_after', k.qty_after,
-                                                               'transfer_id', CASE WHEN m.source = 'transfer' AND k.kind = 'transfer_out' THEN m.transfer_id END)
+                                                               'transfer_id', CASE WHEN m.source = 'transfer' AND k.kind = 'transfer_out' THEN m.transfer_id END,
+                                                               'waste_id', CASE WHEN m.source = 'waste' THEN m.id END)
                                                 ORDER BY k.effective_date DESC, k.movement_id DESC), '[]')
                   FROM (SELECT * FROM k ORDER BY effective_date DESC, movement_id DESC LIMIT 50) k JOIN core.stock_movement m ON m.id = k.movement_id)) $$;
 
@@ -389,6 +390,62 @@ RETURNS TABLE (settlement_id bigint, account_code text, debit_date date, debit_v
   JOIN core.journal_entry de ON de.id = s.debit_entry_id JOIN core.journal_line dl ON dl.entry_id = s.debit_entry_id AND dl.line_no = s.debit_line_no
   JOIN core.journal_entry ce ON ce.id = s.credit_entry_id JOIN core.journal_line cl ON cl.entry_id = s.credit_entry_id AND cl.line_no = s.credit_line_no
   WHERE s.party_id = p_party ORDER BY de.effective_date DESC, s.id DESC LIMIT 500 $$;
+
+-- ---------- waste / stock shortage (Holoo type Z, E17): Dr waste expense / Cr purchases at quantity × moving-average cost ----------
+-- The goods leave at the moving average of that moment (as a sale does); the voucher is the proven Holoo rule
+-- (core.document_posting_lines kind 'waste', parity in migration/posting_parity.py). Correction: waste reversal (stock and voucher together).
+CREATE FUNCTION core.stock_waste(p_item int, p_warehouse int, p_qty numeric, p_date date, p_reason text, p_user text) RETURNS bigint LANGUAGE plpgsql AS $$
+DECLARE mid bigint := nextval('core.stock_movement_id_seq'); cost numeric; eid bigint;
+BEGIN
+  PERFORM core.require_permission(p_user, 'inventory.manage'); PERFORM core.require_reason(p_reason);
+  IF (SELECT is_service FROM core.item WHERE id = p_item) THEN RAISE EXCEPTION 'خدمت موجودی ندارد'; END IF;
+  IF coalesce(p_qty, 0) <= 0 THEN RAISE EXCEPTION 'تعداد ضایعات باید مثبت باشد'; END IF;
+  INSERT INTO core.stock_movement (id, item_id, warehouse_id, kind, effective_date, effective_time, qty, source, source_ref, created_by)
+  VALUES (mid, p_item, p_warehouse, 'waste', p_date, localtime(0), p_qty, 'waste', 'waste:' || mid, p_user);
+  SELECT abs(round(k.value)) INTO cost FROM core.item_kardex(p_item, NULL) k WHERE k.movement_id = mid;
+  IF coalesce(cost, 0) <= 0 THEN RAISE EXCEPTION 'بهای این کالا در کاردکس صفر است؛ ضایعات بدون بها ثبت نمی‌شود'; END IF;
+  eid := core.post_document(jsonb_build_object('kind', 'waste', 'expense_account_id', core.setting_account('account_waste_expense'),
+           'lines', jsonb_build_array(jsonb_build_object('account_id', core.setting_account('account_purchases'), 'amount', cost))),
+         p_date, 'waste', mid::text, p_user, 'ضایعات / کسری: ' || p_reason);
+  INSERT INTO core.audit_event (actor, action, object_type, object_id, after, reason)
+  VALUES (p_user, 'waste', 'stock', mid::text, jsonb_build_object('item', p_item, 'warehouse', p_warehouse, 'qty', p_qty, 'cost', cost, 'entry', eid), p_reason);
+  RETURN mid;
+END $$;
+
+CREATE FUNCTION core.stock_waste_reverse(p_movement bigint, p_date date, p_reason text, p_user text) RETURNS bigint LANGUAGE plpgsql AS $$
+DECLARE m core.stock_movement; eid bigint; rid bigint;
+BEGIN
+  PERFORM core.require_permission(p_user, 'inventory.manage'); PERFORM core.require_reason(p_reason);
+  SELECT * INTO m FROM core.stock_movement WHERE id = p_movement AND source = 'waste';
+  IF NOT FOUND THEN RAISE EXCEPTION 'ضایعات % وجود ندارد', p_movement; END IF;
+  IF EXISTS (SELECT 1 FROM core.stock_movement WHERE reverses_id = p_movement) THEN RAISE EXCEPTION 'این ضایعات قبلاً برگشت خورده است'; END IF;
+  INSERT INTO core.stock_movement (item_id, warehouse_id, kind, effective_date, effective_time, qty, source, reverses_id, created_by)
+  VALUES (m.item_id, m.warehouse_id, m.kind, m.effective_date, m.effective_time, m.qty, 'waste_reversal', m.id, p_user);
+  SELECT entry_id INTO eid FROM core.document_posting WHERE source = 'waste' AND source_ref = p_movement::text;
+  rid := core.reverse_entry(eid, p_date, p_reason, p_user);
+  INSERT INTO core.audit_event (actor, action, object_type, object_id, after, reason)
+  VALUES (p_user, 'reverse_waste', 'stock', p_movement::text, jsonb_build_object('reversal_entry', rid), p_reason);
+  RETURN rid;
+END $$;
+
+-- a waste voucher is corrected with its stock (stock.waste_reverse), never by reversing the voucher alone
+CREATE OR REPLACE FUNCTION core.journal_reverse(p_entry bigint, p_date date, p_reason text, p_user text) RETURNS bigint LANGUAGE plpgsql AS $$
+DECLARE e core.journal_entry; nid bigint;
+BEGIN
+  PERFORM core.require_permission(p_user, 'journal.reverse'); PERFORM core.require_reason(p_reason);
+  SELECT * INTO e FROM core.journal_entry WHERE id = p_entry;
+  IF NOT FOUND THEN RAISE EXCEPTION 'سند % وجود ندارد', p_entry; END IF;
+  IF e.source = 'holoo' THEN RAISE EXCEPTION 'سند منتقل‌شده از هلو با Backup بعدی هلو اصلاح می‌شود، نه دستی'; END IF;
+  IF e.source IN ('sales_invoice', 'purchase_invoice', 'return') THEN
+    RAISE EXCEPTION 'سند فاکتور با «برگشت» اصلاح می‌شود، نه با ابطال سند'; END IF;
+  IF e.source = 'cheque' THEN RAISE EXCEPTION 'سند چک با ابطال رویداد همان چک اصلاح می‌شود'; END IF;
+  IF e.source = 'waste' THEN RAISE EXCEPTION 'سند ضایعات با «برگشت ضایعات» در کارت کالا اصلاح می‌شود تا موجودی هم برگردد'; END IF;
+  IF e.kind IN ('opening', 'closing', 'reversal') THEN RAISE EXCEPTION 'سند % (%) ابطال‌پذیر نیست', e.id, e.kind; END IF;
+  nid := core.reverse_entry(p_entry, p_date, p_reason, p_user);
+  INSERT INTO core.audit_event (actor, action, object_type, object_id, after, reason) VALUES (p_user, 'reverse', 'journal_entry', p_entry::text,
+    jsonb_build_object('reversal_entry_id', nid), p_reason);
+  RETURN nid;
+END $$;
 
 -- ---------- Holoo backup import from the application: a queued request, run by the server's import worker ----------
 ALTER TABLE core.holoo_import_batch DROP CONSTRAINT holoo_import_batch_status_check;
@@ -432,5 +489,9 @@ INSERT INTO core.operation_catalog (operation, kind, function_signature, purpose
   ('years.change_status', 'write', 'core.change_fiscal_year_status(integer,text,text,text)', 'open / start closing / close / reopen a fiscal year', NULL,
    'the year''s status; audited with reason', 'the opposite change (period.reopen)', 'D-05', false, false),
   ('ar.settlements', 'read', 'core.party_settlements(integer)', 'a party''s active allocations: which credit settled which debit', NULL, 'none', '—', 'W-17', true, false),
+  ('stock.waste', 'write', 'core.stock_waste(integer,integer,numeric,date,text,text)', 'record waste or a stock shortage (goods out at moving average; Dr waste expense / Cr purchases)',
+   'inventory.manage', 'one stock movement and its voucher; audited', 'stock.waste_reverse', 'E17, E23', true, false),
+  ('stock.waste_reverse', 'write', 'core.stock_waste_reverse(bigint,date,text,text)', 'reverse a waste record: the goods return and its voucher is reversed',
+   'inventory.manage', 'reversal movement and reversal voucher; audited', '—', 'E17', true, false),
   ('imports.queue', 'write', 'core.import_queue(text,text)', 'queue an uploaded Holoo backup for import by the server', 'holoo.import',
    'one queued import batch', 'a queued batch that never starts is closed as failed by the next import', 'D-07', true, false);
