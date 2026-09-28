@@ -91,7 +91,8 @@ export function table(rows, cols, opts = {}) {
     body += '<tr class="total">' + cols.map((c, i) => i === 0 ? '<td>جمع</td>' : `<td class="num">${k(opts.totals, c[0]) ? fmt(t[c[0]]) : ''}</td>`).join('') + '</tr>'; }
   // a numeric column's header sits over its numbers (numbers are left-aligned in right-to-left tables)
   const numCol = c => c[2] !== 'html' && !TEXT.has(c[0]) && !DATE.has(c[0]) && c[0] !== 'description' && rows.some(r => isNum(r[c[0]]));
-  return `<div class="tablewrap"><table><thead><tr>${cols.map(c => `<th${numCol(c) ? ' class="num"' : ''}>${c[1]}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
+  const csv = rows.length > 1 && !opts.noExport ? '<button class="btn tiny noprint" data-csv title="ذخیره این جدول برای Excel">خروجی Excel</button>' : '';
+  return `<div class="tablewrap">${csv}<table><thead><tr>${cols.map(c => `<th${numCol(c) ? ' class="num"' : ''}>${c[1]}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 const k = (arr, x) => arr.includes(x);
 document.addEventListener('click', e => { const tr = e.target.closest('tr.link'); if (tr && !e.target.closest('button,input,select,a')) location.hash = tr.dataset.href; });
@@ -119,3 +120,42 @@ export const newKey = () => (crypto.randomUUID ? crypto.randomUUID() : String(Da
 
 // the current page registers work to do once its HTML is in the DOM (wiring buttons)
 export const ctx = {after: null};
+
+// ---- export any table as it is shown (CSV with a BOM, opens correctly in Excel; numbers without separators) ----
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-csv]'); if (!b) return;
+  const t = b.closest('.tablewrap').querySelector('table');
+  const cell = td => { let v = td.innerText.trim(); const l = latin(v);
+    if (/^-?[\d٬,]+(\.\d+)?$/.test(v.replace(/[۰-۹]/g, '0')) && /^-?[\d.]+$/.test(l)) v = l;      // Persian-formatted number → plain number
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  const lines = [...t.querySelectorAll('tr')].map(tr => [...tr.children].filter(c => !c.querySelector('button,input')).map(cell).join(','));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\r\n')], {type: 'text/csv;charset=utf-8'}));
+  a.download = (document.querySelector('#view h1, #view h2')?.innerText || 'table').replace(/[\\/:*?"<>|]/g, '').slice(0, 60) + '.csv';
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+});
+
+// ---- send a file to the server (a bank statement, a Holoo backup) with progress ----
+export function upload(path, file, onprogress) {
+  return new Promise((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    x.open('POST', path);
+    if (session.token) x.setRequestHeader('Authorization', 'Bearer ' + session.token); else x.setRequestHeader('X-Almas-User', session.user);
+    x.setRequestHeader('Content-Type', 'application/octet-stream');
+    if (onprogress) x.upload.onprogress = ev => ev.lengthComputable && onprogress(ev.loaded / ev.total);
+    x.onload = () => { let j; try { j = JSON.parse(x.responseText); } catch (e) { j = {detail: x.statusText}; }
+      if (x.status >= 200 && x.status < 300) resolve(j); else reject(new Error(persian(j.detail || x.status))); };
+    x.onerror = () => reject(new Error('ارسال فایل قطع شد؛ اتصال را بررسی و دوباره تلاش کنید.'));
+    x.send(file);
+  });
+}
+
+// ---- the company header on every printed page (from the owner's settings, never invented) ----
+export async function printHead() {
+  try {
+    const c = (await op('company.profile'))[0] || {};
+    const ids = [c.national_id && 'شناسه ملی ' + c.national_id, c.economic_code && 'کد اقتصادی ' + c.economic_code, c.phone && 'تلفن ' + c.phone, c.address].filter(Boolean);
+    $('#printhead').innerHTML = `<b>${esc(c.title || '')}</b>${ids.length ? `<span>${ids.map(esc).join(' · ')}</span>` : ''}<span class="printdate"></span>`;
+  } catch (e) {}
+}
+window.addEventListener('beforeprint', () => { const d = document.querySelector('.printdate'); if (d) d.textContent = 'تاریخ چاپ ' + jdate(new Date().toISOString()); });

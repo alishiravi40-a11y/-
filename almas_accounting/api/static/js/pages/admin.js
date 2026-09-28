@@ -1,4 +1,4 @@
-import {$, $$, api, card, ctx, esc, fmt, latin, msg, op, options, session, table, can} from '../core.js';
+import {$, $$, api, card, ctx, esc, fmt, j2iso, latin, msg, num, one, op, options, session, table, todayIso, can} from '../core.js';
 import {action} from './documents.js';
 
 const KIND = {person: 'شخص', service: 'سرویس', ai_agent: 'عامل هوش مصنوعی'};
@@ -44,11 +44,49 @@ export default {
   periods: {
     title: 'سال‌ها و دوره‌ها', group: 'admin', gate: 'periods.list',
     async render() {
-      const rows = await op('periods.list');
-      ctx.after = () => $$('[data-per]').forEach(b => b.onclick = async () => { const [id, st] = b.dataset.per.split(':'); const why = prompt('علت تغییر وضعیت دوره:'); if (!why) return;
-        try { await op('periods.change_status', {p_period: Number(id), p_new: st, p_reason: why}); window.dispatchEvent(new Event('almas:refresh')); } catch (e) { msg('permsg', esc(e.message)); } });
+      const [rows, years] = await Promise.all([op('periods.list'), op('years.overview')]);
+      const refresh = () => window.dispatchEvent(new Event('almas:refresh'));
+      ctx.after = () => {
+        $$('[data-per]').forEach(b => b.onclick = async () => { const [id, st] = b.dataset.per.split(':'); const why = prompt('علت تغییر وضعیت دوره:'); if (!why) return;
+          try { await op('periods.change_status', {p_period: Number(id), p_new: st, p_reason: why}); refresh(); } catch (e) { msg('permsg', esc(e.message)); } });
+        $$('[data-year]').forEach(b => b.onclick = async () => { const [id, st] = b.dataset.year.split(':'); const why = prompt('علت تغییر وضعیت سال:'); if (!why) return;
+          try { await op('years.change_status', {p_year: Number(id), p_new: st, p_reason: why}); refresh(); } catch (e) { msg('ymsg', esc(e.message)); } });
+        $$('[data-opennext]').forEach(b => b.onclick = async () => { const [y, n] = b.dataset.opennext.split(':');
+          if (!confirm(`سند افتتاحیه سال ${n} از روی اختتامیه ${y} ساخته شود؟`)) return;
+          try { const e = one(await op('year.open_next', {p_year: y, p_next: n})); location.hash = '#/entry/' + e; } catch (e) { msg('ymsg', esc(e.message)); } });
+        action('ynew', 'ymsg', async () => {
+          const code = latin($('#ycode').value.trim()); if (!/^\d{4}$/.test(code)) throw new Error('سال را چهار رقمی وارد کنید (مثل ۱۴۰۶).');
+          const starts = []; for (let m = 1; m <= 12; m++) starts.push(j2iso(`${code}/${String(m).padStart(2, '0')}/01`));
+          const next = j2iso(`${Number(code) + 1}/01/01`); if (starts.includes(null) || !next) throw new Error('تاریخ‌های سال ساخته نشد.');
+          const end = new Date(new Date(next + 'T00:00:00Z').getTime() - 864e5).toISOString().slice(0, 10);
+          await op('years.create', {p_code: code, p_period_starts: starts, p_ends_on: end}); refresh();
+        });
+        action('yclose', 'ymsg', async () => {
+          const y = $('#cyear').value, code = latin($('#cpl').value.trim()), acc = (await op('accounts.tree', {p_as_of: todayIso})).find(a => a.code === code && a.is_leaf);
+          if (!acc) throw new Error('کد حساب سود و زیان سال (حساب معین آخر) را درست وارد کنید.');
+          const inv = num('cinv'); if (inv === null || inv < 0) throw new Error('ارزش موجودی پایان سال را وارد کنید.');
+          const why = $('#creason').value; if (!confirm(`بستن سال ${y} سند بستن حساب‌های موقت و اختتامیه می‌سازد. ادامه؟`)) return;
+          await op('year.close', {p_year: y, p_ending_inventory: inv, p_inventory_source: $('#csrc').value, p_pl_account: acc.account_id, p_reason: why}); refresh();
+        });
+      };
       const nxt = s => s === 'open' ? [['closing', 'شروع بستن']] : s === 'closing' ? [['closed', 'بستن'], ['open', 'بازگشایی']] : [['open', 'بازگشایی']];
-      return card('', table(rows.map(r => ({...r, st: PSTATUS[r.status] || r.status, act: nxt(r.status).map(([s, l]) => `<button class="btn" data-per="${r.period_id}:${s}">${l}</button>`).join(' ')})),
+      const YST = {open: 'باز', closing: 'در حال بستن', closed: 'بسته'};
+      const closable = years.filter(y => y.status === 'closing' && !y.closed);
+      const yearsCard = card('سال‌های مالی', table(years.map((y, i) => {
+          const later = years[i - 1];                       // the next year (list is newest first)
+          const acts = nxt(y.status).map(([st, l]) => `<button class="btn" data-year="${y.fiscal_year_id}:${st}">${l} سال</button>`);
+          if (y.closed && !y.opening_generated && later) acts.push(`<button class="btn primary" data-opennext="${y.code}:${later.code}">ساخت افتتاحیه ${later.code}</button>`);
+          return {...y, st: YST[y.status] || y.status, cl: y.closed ? (y.opening_generated ? 'بسته و افتتاحیه ساخته‌شده' : 'بسته‌شده') : '—', act: acts.join(' ')};
+        }), [['code', 'سال'], ['starts_on', 'از'], ['ends_on', 'تا'], ['st', 'وضعیت'], ['open_periods', 'دوره باز'], ['cl', 'اختتامیه'], ['act', '', 'html']], {noExport: true}) +
+        `<div class="row"><label>سال تازه <input id="ycode" size="6" placeholder="۱۴۰۶"></label><button class="btn" id="ynew">ساخت سال و ۱۲ دوره</button></div>` +
+        (closable.length ? `<h3>بستن سال (سند بستن حساب‌های موقت و اختتامیه)</h3><div class="row"><label>سال <select id="cyear">${closable.map(y => `<option>${y.code}</option>`).join('')}</select></label>
+          <label>موجودی پایان سال (ریال) <input id="cinv" inputmode="numeric" size="16" value="${closable[0].kardex_valuation ?? ''}"></label>
+          <label>منبع این عدد <input id="csrc" size="22" value="ارزش کاردکس سیستم (میانگین موزون)"></label>
+          <label>کد حساب سود و زیان سال <input id="cpl" size="10"></label><label>علت <input id="creason" size="18"></label>
+          <button class="btn danger" id="yclose">بستن سال</button></div>
+          <p class="muted">عدد موجودی پایان سال ورودی بستن است و از کاردکس پیشنهاد شده؛ اگر حسابدار از انبارگردانی یا روش دیگری عدد دیگری دارد، همان را با منبعش وارد کند.</p>` : '') +
+        '<div id="ymsg"></div>');
+      return yearsCard + card('', table(rows.map(r => ({...r, st: PSTATUS[r.status] || r.status, act: nxt(r.status).map(([s, l]) => `<button class="btn" data-per="${r.period_id}:${s}">${l}</button>`).join(' ')})),
           [['fiscal_year', 'سال'], ['period', 'دوره'], ['starts_on', 'از'], ['ends_on', 'تا'], ['st', 'وضعیت'], ['entries', 'تعداد سند'], ['act', '', 'html']]) +
         '<p class="muted">دوره بسته هیچ سندی نمی‌پذیرد؛ دوره در حال بستن فقط سند اصلاحی. بستن و بازگشایی فقط با مجوز، علت و Audit (D-05).</p><div id="permsg"></div>');
     }

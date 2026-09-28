@@ -51,7 +51,7 @@ async function invoiceForm(kind) {
                                               p_supplier_invoice_no: $('#isupno').value || null, p_extra_cost: num('iextra') || 0}));
         await op('purchase.finalize', {p_invoice: id});
       }
-      $('#imsg').innerHTML = `<p class="zero">فاکتور ثبت نهایی شد (سند حسابداری و ${sale ? 'خروج' : 'ورود'} کالا).</p>` +
+      $('#imsg').innerHTML = `<p class="zero">فاکتور ثبت نهایی شد (سند حسابداری و ${sale ? 'خروج' : 'ورود'} کالا). <a class="btn primary" href="#/invoice/${id}?kind=${kind}">نمایش و چاپ فاکتور</a></p>` +
                              await voucherHtml(sale ? 'sales_invoice' : 'purchase_invoice', id);
       lines.length = 0; draw();
     });
@@ -100,8 +100,10 @@ export default {
   purchase: {title: 'فاکتور خرید', group: 'daily', gate: 'purchase.create', render: () => invoiceForm('purchase')},
   ret: {
     title: 'برگشت فروش / خرید', group: 'daily', gate: 'return.create',
-    async render() {
+    async render(p) {
       ctx.after = () => {
+        if (p.kind) $('#rkind').value = p.kind;
+        if (p.q) { $('#rinv').value = p.q; setTimeout(() => $('#rfind').click(), 0); }
         action('rfind', 'rmsg', async () => {
           const kind = $('#rkind').value;
           const rows = await op('invoices.find', {p_kind: kind, p_query: latin($('#rinv').value.trim())});
@@ -122,7 +124,7 @@ export default {
           const id = one(await op('return.create', {p_kind: kind === 'sales' ? 'sales_return' : 'purchase_return', p_invoice: invoice,
                                                     p_date: readDate('rdate'), p_reason: $('#rreason').value, p_lines: lines}));
           await op('return.finalize', {p_return: id});
-          $('#rmsg').innerHTML = '<p class="zero">برگشت ثبت نهایی شد.</p>' + await voucherHtml('return', id);
+          $('#rmsg').innerHTML = `<p class="zero">برگشت ثبت نهایی شد. <a class="btn primary" href="#/invoice/${id}?kind=return">نمایش و چاپ برگشت</a></p>` + await voucherHtml('return', id);
           pick(kind, invoice);
         });
       };

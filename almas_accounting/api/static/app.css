@@ -40,6 +40,13 @@ a{color:var(--accent)}
 @media (max-width:760px){.layout{grid-template-columns:1fr}nav#nav{border-left:0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:4px}
   .navgroup{margin:0;display:contents}.navtitle{display:none}nav#nav a{padding:4px 8px;font-size:14px}}
 /* print: only the page content — a voucher, an invoice or a report — in black on white */
-@media print{header,nav#nav,.btn,button,input,select,#results{display:none!important}
+#printhead{display:none}.tablewrap{position:relative}.btn.tiny{font-size:12px;padding:2px 8px;float:left;margin:0 0 4px}
+.doc{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}.doc h1{font-size:20px;margin:0 0 6px}
+.doc .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 16px;margin:10px 0}.doc .sign{display:flex;justify-content:space-around;margin-top:40px}
+.doc .sign div{border-top:1px solid var(--line);padding-top:4px;min-width:160px;text-align:center}.progress{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.progress>i{display:block;height:100%;background:var(--accent);width:0}
+@media print{header,nav#nav,.btn,button,input,select,#results,.noprint{display:none!important}
+  #printhead{display:flex!important;justify-content:space-between;gap:12px;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:10px;font-size:12px}
+  #printhead b{font-size:15px}.doc{border:0;padding:0}.doc .sign div{border-top:1px solid #000}
   body{background:#fff!important;color:#000!important}.layout{display:block!important}main,#view{padding:0!important;margin:0!important;max-width:none!important}
   .card{border:0!important;box-shadow:none!important;break-inside:avoid}table{font-size:11px}a{color:#000;text-decoration:none}}

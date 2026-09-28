@@ -14,12 +14,14 @@ The development header X-Almas-User is accepted ONLY when ALMAS_API_DEV_AUTH=1.
 """
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import decimal
 import ipaddress
 import json
 import os
 import secrets
+import threading
 
 import psycopg
 from psycopg.types.json import Jsonb
@@ -31,7 +33,15 @@ from pydantic import BaseModel
 from api import auth
 
 ACTOR_PARAMS = {"p_user", "p_by", "p_created_by"}
-app = FastAPI(title="Almas Shahr accounting API", version="0.3.0")
+@contextlib.asynccontextmanager
+async def _lifespan(_app):
+    # a Holoo import queued before a restart is picked up again (its steps are idempotent)
+    if os.environ.get("ALMAS_PG_DSN") and os.environ.get("ALMAS_IMPORT_WORKER", "1") == "1":
+        threading.Thread(target=run_import_worker, daemon=True).start()
+    yield
+
+
+app = FastAPI(title="Almas Shahr accounting API", version="0.4.0", lifespan=_lifespan)
 # the web UI is a static page that uses nothing but this API (no logic of its own)
 app.mount("/ui", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static"), html=True), name="ui")
 
@@ -314,6 +324,12 @@ class Call(BaseModel):
 
 @app.post("/operations/{operation}")
 def call(operation: str, body: Call, user: str = Depends(authenticate)):
+    return run_operation(user, operation, body.args, body.note)
+
+
+def run_operation(user: str, operation: str, call_args: dict, note: str | None = None, channel: str = "api") -> dict:
+    """The one door: permission (database), named arguments, injected actor, audit — for /operations and for file uploads."""
+    body = Call(args=call_args, note=note)
     # autocommit: the transaction below is the real one, so deferred checks (e.g. negative stock) fire inside it
     with psycopg.connect(dsn(), autocommit=True) as c:
         op = c.execute("""SELECT kind, function_signature FROM core.operation_catalog WHERE operation = %s""", (operation,)).fetchone()
@@ -345,9 +361,87 @@ def call(operation: str, body: Call, user: str = Depends(authenticate)):
                 if kind == "write":
                     c.execute("""INSERT INTO core.audit_event (actor, action, object_type, object_id, after, reason)
                                  VALUES (%s, 'api_call', 'operation', %s, %s::jsonb, %s)""",
-                              (user, operation, json.dumps({"args": body.args, "channel": "api"}, default=str), body.note))
+                              (user, operation, json.dumps({"args": body.args, "channel": channel}, default=str), body.note))
         except psycopg.errors.InsufficientPrivilege as e:
             raise HTTPException(403, str(e).split("\n")[0])
         except (psycopg.errors.RaiseException, psycopg.errors.IntegrityError, psycopg.errors.DataError) as e:
             raise HTTPException(400, str(e).split("\n")[0])
         return {"operation": operation, "kind": kind, "rows": result}
+
+
+# ---------- files: a bank statement, a Holoo backup (the file is read here; the effect is a catalogued operation) ----------
+MAX_STATEMENT_BYTES = 20 << 20
+
+
+@app.post("/files/bank_statement")
+async def upload_bank_statement(request: Request, account: int, name: str, user: str = Depends(authenticate)):
+    from treasury import statement_file
+    data = await request.body()
+    if not data or len(data) > MAX_STATEMENT_BYTES:
+        raise HTTPException(400, "فایل خالی است یا از ۲۰ مگابایت بزرگ‌تر است")
+    try:
+        lines = statement_file.read_statement(data, name)
+    except statement_file.StatementError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:                                          # a damaged or unknown file
+        raise HTTPException(400, f"فایل خوانده نشد: {type(e).__name__}")
+    res = run_operation(user, "bank.statement_import", {"p_account": account, "p_file_name": os.path.basename(name)[:200],
+                                                        "p_sha256": statement_file.sha256(data), "p_lines": lines}, channel="file_upload")
+    st = res["rows"][0]["bank_statement_import"]
+    st = json.loads(st) if isinstance(st, str) else st
+    ids = st.pop("installment_line_ids", None) or []
+    if ids:                                                         # Beta scheme account: suggest the installment (a person confirms)
+        from beta import statement_import as beta_st
+        with psycopg.connect(dsn(), autocommit=True) as c:
+            for lid, value_date, dep, did, desc in c.execute("""SELECT id, value_date, deposit, deposit_id, description FROM core.bank_statement_line
+                                                                 WHERE id = ANY (%s)""", (ids,)).fetchall():
+                status, detail = beta_st.match(c, {"date": value_date, "deposit": int(dep), "deposit_id": did or "", "description": desc or ""}, account)
+                c.execute("UPDATE core.bank_statement_line SET match_status = %s, match_detail = %s WHERE id = %s",
+                          (status, json.dumps(detail, default=str), lid))
+                st.setdefault("installment_match", {}).setdefault(status, 0)
+                st["installment_match"][status] += 1
+    return st
+
+
+def upload_dir() -> str:
+    d = os.environ.get("ALMAS_UPLOAD_DIR") or os.path.join(os.path.expanduser("~"), ".almas", "uploads")
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+@app.post("/files/holoo_backup")
+async def upload_holoo_backup(request: Request, name: str, user: str = Depends(authenticate)):
+    import re
+    with psycopg.connect(dsn(), autocommit=True) as c:             # refuse early: permission, and one import at a time
+        try:
+            c.execute("SELECT core.require_operation(%s, 'imports.queue')", (user,))
+        except psycopg.errors.InsufficientPrivilege as e:
+            raise HTTPException(403, str(e).split("\n")[0])
+        if c.execute("SELECT EXISTS (SELECT 1 FROM core.holoo_import_batch WHERE status IN ('queued', 'running'))").fetchone()[0]:
+            raise HTTPException(409, "یک ورود Backup در صف یا در حال اجراست؛ پس از پایان آن دوباره بفرستید")
+    base = re.sub(r"[^A-Za-z0-9._-]", "_", os.path.basename(name))[-80:] or "backup.bak"
+    stored = f"{dt.datetime.now():%Y%m%d%H%M%S}_{secrets.token_hex(3)}_{base}"
+    path = os.path.join(upload_dir(), stored)
+    size = 0
+    with open(path, "wb") as f:                                     # streamed: a backup is hundreds of megabytes
+        async for chunk in request.stream():
+            f.write(chunk)
+            size += len(chunk)
+    if size == 0:
+        os.remove(path)
+        raise HTTPException(400, "فایل خالی است")
+    res = run_operation(user, "imports.queue", {"p_file_name": stored}, channel="file_upload")
+    batch = res["rows"][0]["import_queue"]
+    if os.environ.get("ALMAS_IMPORT_WORKER", "1") == "1":
+        threading.Thread(target=run_import_worker, daemon=True).start()
+    return {"batch": batch, "bytes": size, "status": "queued"}
+
+
+def run_import_worker():
+    """Runs the queued Holoo import (the pipeline of migration/import_backup.py) in the server process."""
+    from migration import import_backup
+    try:
+        import_backup.run_queued(dsn(), upload_dir(), os.environ.get("ALMAS_HOLOO_WORKDIR") or os.path.join(upload_dir(), "..", "holoo_work"))
+    except Exception:                                               # recorded on the batch by the importer
+        pass
+

@@ -1,5 +1,5 @@
 // Router, navigation, sign-in and global search. Pages live in ./pages/*.js and register themselves in ROUTES.
-import {$, $$, api, esc, keep, latin, op, session, persian, ctx} from './core.js';
+import {$, $$, api, esc, keep, latin, op, session, persian, ctx, printHead} from './core.js';
 import home from './pages/home.js';
 import docs from './pages/documents.js';
 import ledger from './pages/ledger.js';
@@ -8,9 +8,11 @@ import inventory from './pages/inventory.js';
 import agents from './pages/agents.js';
 import admin from './pages/admin.js';
 import holoo from './pages/holoo.js';
+import invoices from './pages/invoices.js';
+import setup from './pages/setup.js';
 
 // route → {title, group, gate (catalogued operation that must be permitted), render(params) → html, after?}
-export const ROUTES = {...home, ...docs, ...ledger, ...treasury, ...inventory, ...agents, ...admin, ...holoo};
+export const ROUTES = {...home, ...docs, ...ledger, ...treasury, ...inventory, ...agents, ...admin, ...holoo, ...invoices, ...setup};
 const GROUPS = [['home', 'میز کار'], ['daily', 'عملیات روزانه'], ['books', 'اشخاص و دفاتر'], ['money', 'بانک، صندوق و چک'], ['stock', 'کالا و انبار'],
                 ['agents', 'نمایندگان و بتا'], ['reports', 'گزارش‌ها'], ['holoo', 'هلو'], ['admin', 'مدیریت'], ['agent', 'نماینده']];
 
@@ -68,6 +70,7 @@ export async function start() {
     }
   }
   $('#search').hidden = !session.user || session.agent;
+  if (session.user && !session.agent) printHead();
   render();
 }
 

@@ -1,13 +1,13 @@
 // Holoo coexistence: every backup import (backup → reader → staging → change detection → import → reconciliation) and its review items
-import {$$, card, ctx, esc, fmt, jdate, msg, one, op, table, can} from '../core.js';
+import {$, $$, card, ctx, esc, fmt, jdate, msg, one, op, table, can, upload} from '../core.js';
 
-const STATUS = {running: 'در حال اجرا', reconciled: 'تطبیق کامل', differences: 'مغایرت دارد', failed: 'ناموفق', refused: 'ردشده'};
+const STATUS = {queued: 'در صف', running: 'در حال اجرا', reconciled: 'تطبیق کامل', differences: 'مغایرت دارد', failed: 'ناموفق', refused: 'ردشده'};
 const CHANGE = {added: 'تازه', changed: 'تغییرکرده', removed_in_source: 'حذف‌شده در هلو'};
 const CHECK = {ledger_balances: 'مانده حساب‌ها (هر حساب و شخص)', vouchers: 'تعداد اسناد و نبود ثبت تکراری', inventory: 'موجودی هر کد کالا',
                cheques: 'چک‌ها', tax_submissions: 'سوابق مؤدیان', parties: 'اشخاص', receivables_aging: 'سنی بدهکاران = مانده حساب',
                holoo_view_MandehOfSarfasl: 'مانده‌ها با گزارش خود هلو'};
 const REVIEW = {open: 'باز', accepted: 'پذیرفته‌شده', corrected: 'اصلاح‌شده'};
-const badge = s => `<span class="${s === 'reconciled' || s === 'pass' ? 'zero' : 'err'}">${esc(STATUS[s] || (s === 'pass' ? 'برابر' : s === 'fail' ? 'نابرابر' : s))}</span>`;
+const badge = s => `<span class="${s === 'reconciled' || s === 'pass' ? 'zero' : s === 'queued' || s === 'running' ? 'muted' : 'err'}">${esc(STATUS[s] || (s === 'pass' ? 'برابر' : s === 'fail' ? 'نابرابر' : s))}</span>`;
 const detail = o => Object.entries(o || {}).filter(([k]) => k !== 'status').map(([k, v]) => `${esc(k)}: ${fmt(typeof v === 'object' ? JSON.stringify(v) : v)}`).join('، ');
 
 export default {
@@ -15,10 +15,27 @@ export default {
     title: 'ورود Backup هلو', group: 'holoo', gate: 'imports.list',
     async render() {
       const rows = await op('imports.list', {p_limit: 100});
-      return card('', table(rows.map(r => ({...r, st: badge(r.status), when: jdate(r.started_at)})),
+      const busy = rows.some(r => ['queued', 'running'].includes(r.status));
+      ctx.after = () => {
+        if (busy) setTimeout(() => location.hash.startsWith('#/imports') && window.dispatchEvent(new Event('almas:refresh')), 15000);
+        if (!$('#hup')) return;
+        $('#hup').onclick = async () => {
+          const f = $('#hfile').files[0]; if (!f) return msg('hmsg', 'فایل Backup هلو را انتخاب کنید.');
+          $('#hup').disabled = true; $('#hprog').hidden = false;
+          try {
+            const r = await upload(`/files/holoo_backup?name=${encodeURIComponent(f.name)}`, f, x => { $('#hprog i').style.width = (x * 100) + '%'; $('#hpct').textContent = Math.round(x * 100) + '٪'; });
+            msg('hmsg', `فایل رسید و ورود شماره ${fmt(r.batch)} در صف است. خواندن و تطبیق Backup چند دقیقه طول می‌کشد؛ این صفحه خودش به‌روز می‌شود.`, true);
+            setTimeout(() => window.dispatchEvent(new Event('almas:refresh')), 3000);
+          } catch (e) { msg('hmsg', esc(e.message)); } finally { $('#hup').disabled = false; }
+        };
+      };
+      const form = can('imports.queue') ? card('ارسال Backup تازه هلو', busy ? '<p class="muted">یک ورود در صف یا در حال اجراست؛ پس از پایان آن می‌توانید Backup بعدی را بفرستید. این صفحه هر ۱۵ ثانیه به‌روز می‌شود.</p>'
+          : `<div class="row"><label>فایل Backup (.bak یا فشرده) <input type="file" id="hfile"></label><button class="btn primary" id="hup">ارسال و ورود</button><span id="hpct"></span></div>
+             <div class="progress" hidden id="hprog"><i></i></div><div id="hmsg"></div>`) : '';
+      return form + card('', table(rows.map(r => ({...r, st: badge(r.status), when: jdate(r.started_at)})),
           [['batch_id', 'شماره'], ['when', 'تاریخ'], ['source_db', 'پایگاه هلو'], ['fiscal_year', 'سال'], ['st', 'نتیجه', 'html'], ['changes', 'تغییرات'],
            ['open_reviews', 'موارد باز بررسی'], ['triggered_by', 'اجراکننده']], {link: r => '/import/' + r.batch_id}) +
-        `<p class="muted">هر Backup تازه هلو با دستور <code>python -m migration.import_backup</code> خوانده می‌شود: بررسی سلامت، ثبت تغییرات نسبت به Backup قبلی،
+        `<p class="muted">هر Backup تازه هلو این مراحل را می‌گذراند: بررسی سلامت، ثبت تغییرات نسبت به Backup قبلی،
          انتقال (سند تغییرکرده برگشت و دوباره ثبت می‌شود؛ هیچ سابقه‌ای ویرایش یا حذف نمی‌شود) و تطبیق کامل با هلو. Backup قدیمی‌تر از آخرین ورود پذیرفته نمی‌شود.</p>`);
     }
   },

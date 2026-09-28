@@ -193,15 +193,19 @@ def finish(pg, batch: int, recon: dict) -> str:
     return status
 
 
-def run(files: list[str], workdir: str, pg_dsn: str, fiscal_year: str, operator: str | None = None, allow_older: bool = False,
-        holoo_views: bool = False, force_read: bool = False, cfg=None) -> dict:
+def run(files: list[str], workdir: str, pg_dsn: str, fiscal_year: str | None = None, operator: str | None = None, allow_older: bool = False,
+        holoo_views: bool = False, force_read: bool = False, cfg=None, batch: int | None = None) -> dict:
+    """fiscal_year None: the backup's own year. batch: a queued batch (imports.queue) to run instead of a new one."""
     from holoo_reader import pipeline, publish_pg
     operator = operator or getpass.getuser()
     with psycopg.connect(pg_dsn, autocommit=True) as pg:
         pg.execute("SET application_name = 'holoo-import'")
         claim(pg)
-        batch = pg.execute("INSERT INTO core.holoo_import_batch (triggered_by, input_files, fiscal_year) VALUES (%s, %s, %s) RETURNING id",
-                           (operator, [os.path.basename(f) for f in files], fiscal_year)).fetchone()[0]
+        if batch is None:
+            batch = pg.execute("INSERT INTO core.holoo_import_batch (triggered_by, input_files, fiscal_year) VALUES (%s, %s, %s) RETURNING id",
+                               (operator, [os.path.basename(f) for f in files], fiscal_year)).fetchone()[0]
+        else:
+            _set(pg, batch, status="running", started_at=dt.datetime.now(dt.timezone.utc))
         try:
             res = pipeline.ingest(files, workdir, cfg, operator, force_read)
             report = json.load(open(os.path.join(os.path.dirname(res["silver_path"]), "report.json"), encoding="utf-8"))
@@ -209,6 +213,9 @@ def run(files: list[str], workdir: str, pg_dsn: str, fiscal_year: str, operator:
             finished = backup_finished_at(report)
             _set(pg, batch, reader_status=res["status"], reader_run_id=report["run_id"], backup_sha256=sha, source_db=src,
                  backup_finished_at=finished, reader_checks={"gate_passed": report["gate_passed"], "checks": report["checks"]})
+            if fiscal_year is None:
+                fiscal_year = str(report["profile"].get("fiscal_year"))
+                _set(pg, batch, fiscal_year=fiscal_year)
             if str(report["profile"].get("fiscal_year")) != str(fiscal_year):
                 raise ValueError(f"backup is fiscal year {report['profile'].get('fiscal_year')}, not {fiscal_year}")
             if not report["gate_passed"]:
@@ -237,9 +244,25 @@ def run(files: list[str], workdir: str, pg_dsn: str, fiscal_year: str, operator:
             raise
 
 
+def run_queued(pg_dsn: str, upload_dir: str, workdir: str, holoo_views: bool = True) -> dict | None:
+    """Run the oldest queued import (uploaded from the application). A queued batch whose file is gone is closed as failed."""
+    with psycopg.connect(pg_dsn, autocommit=True) as pg:
+        row = pg.execute("""SELECT id, input_files[1], triggered_by FROM core.holoo_import_batch WHERE status = 'queued' ORDER BY id LIMIT 1""").fetchone()
+    if not row:
+        return None
+    batch, name, operator = row
+    path = os.path.join(upload_dir, name)
+    if not os.path.exists(path):
+        with psycopg.connect(pg_dsn, autocommit=True) as pg:
+            _set(pg, batch, status="failed", error="the uploaded file is no longer on the server", finished_at=dt.datetime.now(dt.timezone.utc))
+        return {"batch": batch, "status": "failed"}
+    os.makedirs(workdir, exist_ok=True)
+    return run([path], workdir, pg_dsn, None, operator, holoo_views=holoo_views, batch=batch)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--pg", required=True); ap.add_argument("--fiscal-year", required=True); ap.add_argument("--workdir", required=True)
+    ap.add_argument("--pg", required=True); ap.add_argument("--fiscal-year"); ap.add_argument("--workdir", required=True)
     ap.add_argument("--allow-older", action="store_true"); ap.add_argument("--holoo-views", action="store_true")
     ap.add_argument("--operator"); ap.add_argument("files", nargs="+")
     a = ap.parse_args()
