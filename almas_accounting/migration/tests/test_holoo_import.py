@@ -138,6 +138,8 @@ def test_newer_backup_changes_are_detected_and_applied_without_editing_legacy_fa
     publish("r2", backup_v2())
     assert db.execute("SELECT count(*) FROM holoo_mirror.change_log WHERE run_id = 'r2'").fetchone()[0] == sum(
         v for t in cs["tables"].values() for k, v in t.items() if k != "unchanged")
+    rep = import_backup.change_summary(db, "r2", DB, repeat_of="r2")
+    assert rep["totals"]["changed"] == rep["totals"]["added"] == rep["totals"]["removed_in_source"] == 0 and rep["same_backup_as_run"] == "r2"
     holoo_inventory.migrate(db, DB)
     again = holoo_incremental.inventory(db, DB, "r2")
     assert again["reversed"] == 0 and again["reentered"] == 0

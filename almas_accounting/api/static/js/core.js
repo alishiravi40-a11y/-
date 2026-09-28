@@ -89,7 +89,9 @@ export function table(rows, cols, opts = {}) {
   let body = rows.map(r => `<tr${link(r)}>` + cols.map(c => cell(c, r)).join('') + '</tr>').join('');
   if (opts.totals) { const t = {}; opts.totals.forEach(k => t[k] = rows.reduce((a, r) => a + Number(r[k] || 0), 0));
     body += '<tr class="total">' + cols.map((c, i) => i === 0 ? '<td>جمع</td>' : `<td class="num">${k(opts.totals, c[0]) ? fmt(t[c[0]]) : ''}</td>`).join('') + '</tr>'; }
-  return `<div class="tablewrap"><table><thead><tr>${cols.map(c => `<th>${c[1]}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
+  // a numeric column's header sits over its numbers (numbers are left-aligned in right-to-left tables)
+  const numCol = c => c[2] !== 'html' && !TEXT.has(c[0]) && !DATE.has(c[0]) && c[0] !== 'description' && rows.some(r => isNum(r[c[0]]));
+  return `<div class="tablewrap"><table><thead><tr>${cols.map(c => `<th${numCol(c) ? ' class="num"' : ''}>${c[1]}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 const k = (arr, x) => arr.includes(x);
 document.addEventListener('click', e => { const tr = e.target.closest('tr.link'); if (tr && !e.target.closest('button,input,select,a')) location.hash = tr.dataset.href; });

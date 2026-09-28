@@ -83,6 +83,7 @@ $('#login').onclick = async () => {
   $('#loginbox').hidden = true; $('#userbox').hidden = false;
   location.hash = '#/'; start();
 };
+$('#print').onclick = () => window.print();
 $('#logout').onclick = async () => {
   try { if (session.token) await api('/auth/logout', {}); } catch (e) {}
   session.token = ''; session.user = ''; keep('almas_token', ''); keep('almas_user', '');

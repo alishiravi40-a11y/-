@@ -16,7 +16,7 @@ h2{font-size:15px;margin:2px 0 10px}
 .tablewrap{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
-th{color:var(--muted);font-weight:600;font-size:13px}td.num{direction:ltr;text-align:left}
+th{color:var(--muted);font-weight:600;font-size:13px}td.num,th.num{direction:ltr;text-align:left}
 tr.link{cursor:pointer}tr.link:hover td{background:var(--hover)}tr.total td{font-weight:700;border-top:2px solid var(--line)}
 .btn{display:inline-block;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 13px;border-radius:8px;cursor:pointer;font:inherit;text-decoration:none}
 .btn:hover{background:var(--hover)}.btn:disabled{opacity:.5;cursor:wait}
@@ -39,3 +39,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0}
 a{color:var(--accent)}
 @media (max-width:760px){.layout{grid-template-columns:1fr}nav#nav{border-left:0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:4px}
   .navgroup{margin:0;display:contents}.navtitle{display:none}nav#nav a{padding:4px 8px;font-size:14px}}
+/* print: only the page content — a voucher, an invoice or a report — in black on white */
+@media print{header,nav#nav,.btn,button,input,select,#results{display:none!important}
+  body{background:#fff!important;color:#000!important}.layout{display:block!important}main,#view{padding:0!important;margin:0!important;max-width:none!important}
+  .card{border:0!important;box-shadow:none!important;break-inside:avoid}table{font-size:11px}a{color:#000;text-decoration:none}}

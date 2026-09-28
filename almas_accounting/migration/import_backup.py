@@ -62,8 +62,9 @@ def order_guard(pg, source_db: str, sha: str, finished) -> str | None:
     return None
 
 
-def change_summary(pg, run: str, source_db: str) -> dict:
-    """Per table: rows added / changed / removed in this run, and unchanged (live rows the run did not touch)."""
+def change_summary(pg, run: str, source_db: str, repeat_of: str | None = None) -> dict:
+    """Per table: rows added / changed / removed in this run, and unchanged (live rows the run did not touch).
+    `repeat_of`: the Reader recognised the same backup again — its changes were applied by the earlier import, so none now."""
     tables = [r[0] for r in pg.execute("SELECT DISTINCT table_name FROM holoo_mirror.change_log WHERE source_db = %s", (source_db,))]
     tables = sorted(set(tables) | {r[0] for r in pg.execute(
         "SELECT table_name FROM information_schema.tables WHERE table_schema = 'holoo_mirror' AND table_name NOT IN ('import_run', 'change_log')")})
@@ -80,12 +81,14 @@ def change_summary(pg, run: str, source_db: str) -> dict:
         live = pg.execute(f'SELECT count(*) FROM holoo_mirror."{t}" WHERE source_db = %s AND removed_run IS NULL', (source_db,)).fetchone()[0]
         row = {"added": ch.get("added", 0), "changed": ch.get("changed", 0), "removed_in_source": ch.get("removed_in_source", 0)}
         row["unchanged"] = live - row["added"] - row["changed"]
-        if first:
+        if first and not repeat_of:
             row["added"], row["unchanged"] = live, 0
+        if repeat_of:
+            row = {"added": 0, "changed": 0, "removed_in_source": 0, "unchanged": live}
         out[t] = row
         for k in tot:
             tot[k] += row[k]
-    return {"tables": out, "totals": tot, "first_import": first}
+    return {"tables": out, "totals": tot, "first_import": first and not repeat_of, **({"same_backup_as_run": repeat_of} if repeat_of else {})}
 
 
 def reconcile(pg, source_db: str, fiscal_year: str) -> dict:
@@ -220,7 +223,8 @@ def run(files: list[str], workdir: str, pg_dsn: str, fiscal_year: str, operator:
             # fresh statistics after publishing: without them the planner can pick nested loops over the mirror (minutes → hours)
             for (t,) in pg.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'holoo_mirror' AND table_type = 'BASE TABLE'").fetchall():
                 pg.execute(f'ANALYZE holoo_mirror."{t}"')
-            _set(pg, batch, change_summary={**change_summary(pg, run_id, src), "added_columns": pub["added_columns"],
+            repeat = run_id if res["status"] == "duplicate" else None
+            _set(pg, batch, change_summary={**change_summary(pg, run_id, src, repeat), "added_columns": pub["added_columns"],
                                             **({"older_backup_allowed": why} if why else {})})
             migrate_run(pg, src, fiscal_year, run_id, batch)
             recon = reconcile(pg, src, fiscal_year)

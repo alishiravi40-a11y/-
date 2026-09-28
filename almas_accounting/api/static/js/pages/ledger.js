@@ -1,5 +1,6 @@
 import {$, $$, card, ctx, dateInput, esc, fmt, j2iso, jdate, jyear, jmonthStart, latin, lookup, msg, newKey, num, one, op, options, picked, readDate, table, todayIso, can} from '../core.js';
 import {action} from './documents.js';
+const ACTION = {insert: 'ایجاد', update: 'ثبت یا تغییر وضعیت', post: 'ثبت', reverse: 'ابطال', delete: 'حذف پیش‌نویس'};
 
 const SOURCE = {manual: 'سند دستی', holoo: 'منتقل‌شده از هلو', treasury: 'دریافت/پرداخت', cheque: 'چک', sales_invoice: 'فاکتور فروش', purchase_invoice: 'فاکتور خرید',
                 return: 'برگشت', closing: 'بستن سال', opening: 'افتتاحیه'};
@@ -135,7 +136,7 @@ export default {
       });
       const canRev = can('journal.reverse') && !d.reversed_by && ['manual', 'treasury'].includes(e.source) && ['normal', 'adjustment'].includes(e.kind);
       return card(`سند ${fmt(e.number)} — ${jdate(e.effective_date)}`,
-          `<p>${esc(e.description || '')}</p><p class="muted">نوع: ${KIND[e.kind] || e.kind} · سال ${esc(e.fiscal_year)} دوره ${esc(e.period)} · ثبت‌کننده ${esc(e.created_by)} در ${esc(String(e.recorded_at).slice(0, 16))}</p>
+          `<p>${esc(String(e.description || '').replace(/^Reversal of (\d+)$/, 'برگشت سند شماره داخلی $1'))}</p><p class="muted">نوع: ${KIND[e.kind] || e.kind} · سال ${esc(e.fiscal_year)} دوره ${esc(e.period)} · ثبت‌کننده ${esc(e.created_by)} در ${esc(String(e.recorded_at).slice(0, 16))}</p>
            <p><b>منشأ:</b> ${origin}${docLink}</p>
            ${d.reverses ? `<p>این سند ابطال <a href="#/entry/${d.reverses}">سند دیگری</a> است. علت: ${esc(e.reason)}</p>` : ''}
            ${d.reversed_by ? `<p class="err">این سند با <a href="#/entry/${d.reversed_by}">سند ابطال</a> خنثی شده است.</p>` : ''}` +
@@ -143,7 +144,7 @@ export default {
             [['line_no', 'ردیف'], ['account_code', 'کد'], ['account_name', 'حساب'], ['party_name', 'شخص'], ['debit', 'بدهکار'], ['credit', 'بستانکار'], ['description', 'شرح']],
             {link: l => l.href, totals: ['debit', 'credit']}) +
           (canRev ? `<div class="row">${dateInput('revdate', 'تاریخ ابطال')}<button class="btn danger" id="rev">ابطال سند</button></div>` : '') + '<div id="emsg"></div>') +
-        card('سابقه', table(d.audit, [['at', 'زمان'], ['actor', 'کاربر'], ['action', 'عمل'], ['reason', 'علت']], {empty: 'سابقه‌ای جز ثبت نیست.'}));
+        card('سابقه', table(d.audit.map(a => ({...a, action: ACTION[a.action] || a.action})), [['at', 'زمان'], ['actor', 'کاربر'], ['action', 'عمل'], ['reason', 'علت']], {empty: 'سابقه‌ای جز ثبت نیست.'}));
     }
   },
   ledger: {
