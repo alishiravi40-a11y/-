@@ -232,3 +232,16 @@ def test_coexistence_native_and_holoo_entries_in_one_period_are_listed_until_the
     assert ctl()["COEX-03"] == (1, 300)                                      # a native entry inside Holoo's time
     with pytest.raises(psycopg.errors.CheckViolation):
         db.execute("SELECT core.change_setting('book_of_record_from', 'soon', 'owner', 'a reason long enough')")
+
+
+def test_one_import_at_a_time_and_a_dead_import_is_closed(db, imp):
+    _, batch = imp
+    dead = batch(status="running")
+    assert import_backup.claim(db) == 1
+    assert db.execute("SELECT status FROM core.holoo_import_batch WHERE id = %s", (dead,)).fetchone()[0] == "failed"
+    with psycopg.connect(DSN, autocommit=True) as other:
+        with pytest.raises(RuntimeError, match="another"):
+            import_backup.claim(other)
+    db.execute("SELECT pg_advisory_unlock(hashtext('core.holoo_import'))")
+    with psycopg.connect(DSN, autocommit=True) as other:
+        assert import_backup.claim(other) == 0

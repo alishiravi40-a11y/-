@@ -174,6 +174,16 @@ def migrate_run(pg, source_db: str, fiscal_year: str, run: str, batch: int) -> d
     return steps
 
 
+def claim(pg) -> int:
+    """One import at a time (session lock). Holding it, any batch still «running» belongs to a process that died: it is closed
+    as failed (its steps are idempotent, so the next import repeats them). Returns how many were closed."""
+    if not pg.execute("SELECT pg_try_advisory_lock(hashtext('core.holoo_import'))").fetchone()[0]:
+        raise RuntimeError("another Holoo import is running")
+    return pg.execute("""UPDATE core.holoo_import_batch SET status = 'failed', finished_at = now(),
+                         error = 'interrupted: the import process stopped before finishing (a later import repeats its steps)'
+                         WHERE status = 'running'""").rowcount
+
+
 def finish(pg, batch: int, recon: dict) -> str:
     status = "reconciled" if all(v.get("status") == "pass" for v in recon.values()) else "differences"
     _set(pg, batch, reconciliation=recon, status=status, finished_at=dt.datetime.now(dt.timezone.utc))
@@ -186,6 +196,7 @@ def run(files: list[str], workdir: str, pg_dsn: str, fiscal_year: str, operator:
     operator = operator or getpass.getuser()
     with psycopg.connect(pg_dsn, autocommit=True) as pg:
         pg.execute("SET application_name = 'holoo-import'")
+        claim(pg)
         batch = pg.execute("INSERT INTO core.holoo_import_batch (triggered_by, input_files, fiscal_year) VALUES (%s, %s, %s) RETURNING id",
                            (operator, [os.path.basename(f) for f in files], fiscal_year)).fetchone()[0]
         try:
@@ -206,6 +217,9 @@ def run(files: list[str], workdir: str, pg_dsn: str, fiscal_year: str, operator:
                 return {"batch": batch, "status": "refused", "reason": why}
             pub = publish_pg.publish(res["silver_path"], pg_dsn)
             run_id = pub["run_id"]
+            # fresh statistics after publishing: without them the planner can pick nested loops over the mirror (minutes → hours)
+            for (t,) in pg.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'holoo_mirror' AND table_type = 'BASE TABLE'").fetchall():
+                pg.execute(f'ANALYZE holoo_mirror."{t}"')
             _set(pg, batch, change_summary={**change_summary(pg, run_id, src), "added_columns": pub["added_columns"],
                                             **({"older_backup_allowed": why} if why else {})})
             migrate_run(pg, src, fiscal_year, run_id, batch)

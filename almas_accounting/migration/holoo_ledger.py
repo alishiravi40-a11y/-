@@ -53,12 +53,16 @@ def build_chart(conn, db: str, run: str) -> dict:
           SELECT legacy_debit_account a, party_id, id FROM core.party_legacy_code WHERE source_db = %(db)s AND legacy_debit_account IS NOT NULL
           UNION ALL SELECT legacy_credit_account, party_id, id FROM core.party_legacy_code WHERE source_db = %(db)s AND legacy_credit_account IS NOT NULL) z
         ORDER BY a, id""", {"db": db})
+    conn.execute("ANALYZE pacc")
     conn.execute("""CREATE TEMP TABLE hacc AS
         SELECT a.code, a.name, a.parent_code, length(a.code) len, a.nature, a.role_type, k.group_code kol_group,
-               p.party_id, EXISTS (SELECT 1 FROM holoo_mirror.voucher_line l WHERE l.source_db = a.source_db AND l.account_code = a.code
-                                   AND l.in_ledger AND l.removed_run IS NULL AND (l.debit <> 0 OR l.credit <> 0)) has_lines
+               p.party_id, u.account_code IS NOT NULL has_lines
         FROM holoo_mirror.account a LEFT JOIN holoo_mirror.account k ON k.source_db = a.source_db AND k.code = left(a.code, 3)
-        LEFT JOIN pacc p ON p.a = a.code WHERE a.source_db = %(db)s AND a.removed_run IS NULL""", {"db": db})
+        LEFT JOIN pacc p ON p.a = a.code
+        -- accounts with postings: one pass over the lines (a correlated EXISTS per account was planned as 33k scans after a re-publish)
+        LEFT JOIN (SELECT DISTINCT account_code FROM holoo_mirror.voucher_line WHERE source_db = %(db)s AND in_ledger AND removed_run IS NULL
+                   AND (debit <> 0 OR credit <> 0)) u ON u.account_code = a.code
+        WHERE a.source_db = %(db)s AND a.removed_run IS NULL""", {"db": db})
     # moeins / kols that hold persons, and whether they also hold non-person accounts with postings
     conn.execute("""CREATE TEMP TABLE target AS
         SELECT h.code, h.party_id,
