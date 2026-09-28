@@ -40,7 +40,7 @@ export default {
     title: 'سند یک مدرک', group: 'home', menu: false,
     async render(p) {
       const rows = await op('documents.voucher', {p_source: p.source, p_ref: String(p.ref)});
-      return card('', rows.length ? `<p><a href="#/entry/${rows[0].entry_id}">نمایش کامل سند ${fmt(rows[0].number)} و منشأ آن</a></p>` +
+      return card('', rows.length ? `<p><a href="#/entry/${rows[0].entry_id}">نمایش کامل سند ${esc(rows[0].number_display)} و منشأ آن</a></p>` +
         table(rows, [['account_code', 'کد'], ['account_name', 'حساب'], ['party_name', 'شخص'], ['debit', 'بدهکار'], ['credit', 'بستانکار'], ['description', 'شرح']], {totals: ['debit', 'credit']})
         : '<p class="muted">این مدرک هنوز سند حسابداری ندارد.</p>');
     }

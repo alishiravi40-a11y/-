@@ -44,7 +44,7 @@ export default {
           (can('ar.allocate') ? `<a class="btn" href="#/settle?party=${x.id}">تطبیق حساب این شخص</a>` : '')) +
         card('چک‌های باز', table(pr.cheques, [['direction', 'نوع'], ['number', 'شماره'], ['amount', 'مبلغ'], ['due_date', 'سررسید'], ['state', 'وضعیت']])) +
         (pr.beta_contracts.length ? card('قراردادهای بتا', table(pr.beta_contracts, [['contract_id', 'قرارداد'], ['total', 'مبلغ کل'], ['outstanding', 'مانده'], ['overdue', 'قسط معوق']])) : '') +
-        card('آخرین گردش‌ها', table(pr.recent, [['date', 'تاریخ'], ['number', 'سند'], ['description', 'شرح'], ['debit', 'بدهکار'], ['credit', 'بستانکار']], {link: e => '/entry/' + e.entry_id}));
+        card('آخرین گردش‌ها', table(pr.recent, [['date', 'تاریخ'], ['number_display', 'سند'], ['description', 'شرح'], ['debit', 'بدهکار'], ['credit', 'بستانکار']], {link: e => '/entry/' + e.entry_id}));
     }
   },
   accounts: {
@@ -80,7 +80,7 @@ export default {
           <label>منشأ <select id="jsrc"><option value="">همه</option>${Object.entries(SOURCE).map(([k, v]) => `<option value="${k}" ${p.source === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
           <button class="btn" id="jgo">نمایش</button> ${can('journal.post_manual') ? '<a class="btn primary" href="#/voucher">+ سند دستی</a>' : ''}</div>` +
         table(rows.map(r => ({...r, src: SOURCE[r.source] || r.source, k: KIND[r.kind] || r.kind, rev: r.reversed ? 'ابطال‌شده' : ''})),
-          [['number', 'شماره'], ['effective_date', 'تاریخ'], ['description', 'شرح'], ['src', 'منشأ'], ['k', 'نوع'], ['total', 'مبلغ'], ['rev', ''], ['created_by', 'ثبت‌کننده']],
+          [['number_display', 'شماره'], ['effective_date', 'تاریخ'], ['description', 'شرح'], ['src', 'منشأ'], ['k', 'نوع'], ['total', 'مبلغ'], ['rev', ''], ['created_by', 'ثبت‌کننده']],
           {link: r => '/entry/' + r.entry_id}));
     }
   },
@@ -135,7 +135,7 @@ export default {
         location.hash = '#/entry/' + nid;
       });
       const canRev = can('journal.reverse') && !d.reversed_by && ['manual', 'treasury'].includes(e.source) && ['normal', 'adjustment'].includes(e.kind);
-      return card(`سند ${fmt(e.number)} — ${jdate(e.effective_date)}`,
+      return card(`سند ${esc(e.number_display || '—')} — ${jdate(e.effective_date)}`,
           `<p>${esc(String(e.description || '').replace(/^Reversal of (\d+)$/, 'برگشت سند شماره داخلی $1'))}</p><p class="muted">نوع: ${KIND[e.kind] || e.kind} · سال ${esc(e.fiscal_year)} دوره ${esc(e.period)} · ثبت‌کننده ${esc(e.created_by)} در ${esc(String(e.recorded_at).slice(0, 16))}</p>
            <p><b>منشأ:</b> ${origin}${docLink}</p>
            ${d.reverses ? `<p>این سند ابطال <a href="#/entry/${d.reverses}">سند دیگری</a> است. علت: ${esc(e.reason)}</p>` : ''}
@@ -165,7 +165,7 @@ export default {
       if (!p.code) return out + '<p class="muted">کد حساب را وارد کنید (یا از تراز یا پرونده شخص روی یک حساب بزنید).</p>';
       const rows = await op('ledger.by_code', {p_year: fy.code, p_code: p.code, p_party: p.party ? Number(p.party) : null, p_from: from, p_to: to});
       return out + card(`دفتر ${esc(p.code)}${p.party ? ' — شخص ' + esc(p.party) : ''}`,
-        table(rows, [['effective_date', 'تاریخ'], ['number', 'سند'], ['account_code', 'حساب'], ['party_name', 'شخص'], ['description', 'شرح'], ['debit', 'بدهکار'], ['credit', 'بستانکار'],
+        table(rows, [['effective_date', 'تاریخ'], ['number_display', 'سند'], ['account_code', 'حساب'], ['party_name', 'شخص'], ['description', 'شرح'], ['debit', 'بدهکار'], ['credit', 'بستانکار'],
                      ['running_balance', 'مانده']], {link: r => '/entry/' + r.entry_id, totals: ['debit', 'credit']}));
     }
   },

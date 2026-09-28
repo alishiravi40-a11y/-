@@ -55,7 +55,7 @@ export default {
       const pays = d.payments.length ? '<h3>دریافت و پرداخت</h3>' + table(d.payments.map(x => ({...x, m: METHOD[x.method] || x.method})),
           [['m', 'روش'], ['account', 'صندوق یا بانک'], ['amount', 'مبلغ'], ['reference', 'مرجع']], {noExport: true}) : '';
       const links = `<div class="row noprint"><button class="btn primary" onclick="window.print()">چاپ</button>
-          ${d.entry ? `<a class="btn" href="#/entry/${d.entry.entry_id}">سند حسابداری ${fmt(d.entry.number)}</a>` : ''}
+          ${d.entry ? `<a class="btn" href="#/entry/${d.entry.entry_id}">سند حسابداری ${esc(d.entry.number_display || d.entry.number)}</a>` : ''}
           ${isRet && h.original_invoice ? `<a class="btn" href="#/invoice/${h.original_invoice}?kind=${d.kind === 'sales_return' ? 'sales' : 'purchase'}">فاکتور اصلی</a>` : ''}
           ${!isRet && h.status === 'final' ? `<a class="btn" href="#/ret?kind=${d.kind}&q=${h.number}">ثبت برگشت</a>` : ''}
           ${(d.returns || []).map(r => `<a class="btn" href="#/invoice/${r.return_id}?kind=return">برگشت ${fmt(r.return_id)}</a>`).join(' ')}

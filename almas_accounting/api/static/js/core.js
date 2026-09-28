@@ -70,7 +70,7 @@ const EVENT = {received: 'دریافت چک', deposited_for_collection: 'خوا�
   endorsed_to_party: 'واگذاری چک', cashed: 'نقد شدن چک', issued: 'صدور چک', paid_by_bank: 'پاس شدن چک', opening_position: 'چک انتقالی'};
 export const role = d => { if (!d || !/^[a-z_:]+$/.test(d)) return d; const [a, b] = d.split(':');
   if (b) return (a === 'cheque_to' ? 'به: ' : 'از: ') + (EVENT[b] || b); return ROLE[a] || d; };
-const TEXT = new Set(['code', 'account_code', 'control', 'operation', 'basis', 'function_signature', 'national_id', 'buyer_national_id', 'customer_national_id',
+const TEXT = new Set(['number_display', 'debit_voucher', 'credit_voucher', 'code', 'account_code', 'control', 'operation', 'basis', 'function_signature', 'national_id', 'buyer_national_id', 'customer_national_id',
   'bank_ref', 'ref', 'agent_code', 'proposed_agent_code', 'evidence_ref', 'beta_order_id', 'mobile', 'username', 'key', 'period', 'fiscal_year', 'bank_code', 'parent_code']);
 const DATE = new Set(['oldest_open_due', 'since', 'effective_date', 'invoice_date', 'due_date', 'sale_date', 'registered_at', 'next_due', 'declared_at', 'created_at',
   'value_date', 'starts_on', 'ends_on', 'last_activity', 'last_movement', 'last_login', 'date', 'updated_at']);

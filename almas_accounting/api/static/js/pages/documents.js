@@ -8,7 +8,7 @@ export function action(id, msgId, fn) {
 }
 export async function voucherHtml(source, ref) {
   const rows = await op('documents.voucher', {p_source: source, p_ref: String(ref)});
-  return `<h2>سند حسابداری ${rows.length ? `<a href="#/entry/${rows[0].entry_id}">${fmt(rows[0].number)}</a>` : ''}</h2>` +
+  return `<h2>سند حسابداری ${rows.length ? `<a href="#/entry/${rows[0].entry_id}">${esc(rows[0].number_display)}</a>` : ''}</h2>` +
     table(rows, [['account_code', 'کد'], ['account_name', 'حساب'], ['party_name', 'شخص'], ['debit', 'بدهکار'], ['credit', 'بستانکار']], {totals: ['debit', 'credit']});
 }
 

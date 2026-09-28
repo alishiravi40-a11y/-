@@ -134,11 +134,18 @@ def migrate(conn, source_db: str, fiscal_year: str, run_id: str | None = None) -
         if unmapped:
             raise RuntimeError(f"{unmapped} visible Holoo lines have no mapped account")
         conn.execute("""CREATE TEMP TABLE vh AS
-            SELECT v.sanad_code, coalesce(v.number, v.sanad_code) AS number, v.doc_date, v.state, v.comment,
+            SELECT v.sanad_code, coalesce(v.number, v.sanad_code) AS number, CASE WHEN v.number IS NULL THEN 0 ELSE coalesce(v.number2, 0) END AS number_sub,
+                   v.doc_date, v.state, v.comment,
                    md5(v.doc_date::text || '|' || v.state || '|' || coalesce(string_agg(vl.account_code || ':' || vl.debit || ':' || vl.credit || ':' ||
                        coalesce(vl.description, ''), ';' ORDER BY vl.line_index), '')) AS h, count(vl.*) AS n
             FROM holoo_mirror.voucher v LEFT JOIN vl ON vl.sanad_code = v.sanad_code
-            WHERE v.source_db = %(db)s AND v.removed_run IS NULL GROUP BY v.sanad_code, v.number, v.doc_date, v.state, v.comment""", {"db": source_db})
+            WHERE v.source_db = %(db)s AND v.removed_run IS NULL GROUP BY v.sanad_code, v.number, v.number2, v.doc_date, v.state, v.comment""", {"db": source_db})
+        # Holoo's voucher number is (Sanad_Code_C, Sanad_Code_C2), shown as «C.C2» (dbo.RetSanadCode; E31). The pair is unique in
+        # Holoo; if a backup ever breaks that, stop with the numbers instead of numbering anything by guess
+        dup = conn.execute("""SELECT number || CASE WHEN number_sub > 0 THEN '.' || number_sub ELSE '' END FROM vh
+                               GROUP BY number, number_sub HAVING count(*) > 1 ORDER BY 1 LIMIT 5""").fetchall()
+        if dup:
+            raise RuntimeError(f"Holoo voucher numbers repeated within {source_db}: {[d[0] for d in dup]}")
         # unchanged → lineage only
         stats["unchanged"] = conn.execute("""UPDATE core.legacy_entry_map m SET last_seen_run = %s FROM vh
             WHERE m.source_db = %s AND m.sanad_code = vh.sanad_code AND m.status IN ('current', 'skipped_no_visible_lines')
@@ -164,11 +171,15 @@ def migrate(conn, source_db: str, fiscal_year: str, run_id: str | None = None) -
             SELECT %s, sanad_code, h, 'skipped_no_visible_lines', %s, %s FROM newv WHERE n = 0""", (source_db, run, run)).rowcount
         # new entries: insert as drafts with lines, then post (entry rules: period, balance, leaf, party)
         stats["entries_created"] = conn.execute("""
-            INSERT INTO core.journal_entry (number, fiscal_year_id, period_id, effective_date, kind, source, source_ref, description, created_by)
-            -- the voucher number people see in Holoo (Sanad_Code_C, unique in 1404); Holoo's ledgers are ordered by it
-            SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM core.journal_entry x WHERE x.fiscal_year_id = %(fy)s AND x.number = n.number) THEN n.number END,
+            INSERT INTO core.journal_entry (number, number_sub, fiscal_year_id, period_id, effective_date, kind, source, source_ref, description, created_by)
+            -- the voucher number people see in Holoo: (Sanad_Code_C, Sanad_Code_C2), unique together; Holoo's ledgers are ordered by it.
+            -- A pair already held by another entry of the year (e.g. a voucher of the new system) is left unnumbered here and gets the
+            -- next number of the year when posted — the Holoo number stays on the lineage (legacy_entry_map, source_ref)
+            SELECT CASE WHEN x.id IS NULL THEN n.number END, CASE WHEN x.id IS NULL THEN n.number_sub ELSE 0 END,
                    %(fy)s, p.id, n.doc_date, coalesce(%(kind)s::jsonb ->> n.state, 'normal'), 'holoo', %(db)s || ':' || n.sanad_code, n.comment, %(u)s
-            FROM newv n JOIN core.period p ON p.fiscal_year_id = %(fy)s AND n.doc_date BETWEEN p.starts_on AND p.ends_on WHERE n.n > 0""",
+            FROM newv n JOIN core.period p ON p.fiscal_year_id = %(fy)s AND n.doc_date BETWEEN p.starts_on AND p.ends_on
+            LEFT JOIN core.journal_entry x ON x.fiscal_year_id = %(fy)s AND x.number = n.number AND x.number_sub = n.number_sub
+            WHERE n.n > 0""",
             {"fy": fid, "kind": json.dumps(KIND), "db": source_db, "u": USER}).rowcount
         conn.execute("""CREATE TEMP TABLE ne AS SELECT DISTINCT ON (e.source_ref) e.id, n.sanad_code, n.h FROM newv n
                         JOIN core.journal_entry e ON e.source = 'holoo' AND e.source_ref = %s || ':' || n.sanad_code AND e.status = 'draft'

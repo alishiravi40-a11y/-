@@ -12,7 +12,7 @@ SCHEMA = "\n".join((ROOT / "core" / "schema" / f).read_text(encoding="utf-8")
                    for f in ("001_core.sql", "002_decisions.sql", "003_below_cost_alerts.sql", "004_beta.sql", "005_legacy_ledger.sql",
                              "006_posting.sql", "007_treasury.sql", "008_receivables.sql",
                              "009_reports.sql", "010_bank_reconciliation.sql", "011_year_end.sql", "012_inventory.sql", "013_ai_catalog.sql", "014_tax.sql", "015_commercial_documents.sql", "016_returns.sql", "017_control_inbox.sql",
-                             "018_document_api.sql", "019_forms_support.sql", "020_management_reports.sql", "021_beta_api_agents.sql", "022_agent_deals.sql", "023_party_role_separation.sql", "024_agent_ui_reads.sql", "025_auth.sql", "026_daily_operations.sql", "027_ui_support.sql", "028_holoo_import.sql", "029_coexistence.sql", "030_daily_gaps.sql"))
+                             "018_document_api.sql", "019_forms_support.sql", "020_management_reports.sql", "021_beta_api_agents.sql", "022_agent_deals.sql", "023_party_role_separation.sql", "024_agent_ui_reads.sql", "025_auth.sql", "026_daily_operations.sql", "027_ui_support.sql", "028_holoo_import.sql", "029_coexistence.sql", "030_daily_gaps.sql", "031_voucher_sub_number.sql"))
 MIRROR = """
 CREATE SCHEMA holoo_mirror;
 CREATE TABLE holoo_mirror.import_run (run_id text PRIMARY KEY, source_db text);
@@ -20,7 +20,7 @@ CREATE TABLE holoo_mirror.person (source_db text, c_code text, name text, name_k
   debit_account text, credit_account text, source_row_hash text, removed_run text, PRIMARY KEY (source_db, c_code));
 CREATE TABLE holoo_mirror.account (source_db text, code text, name text, parent_code text, nature int, group_code int, role_type int,
   removed_run text, PRIMARY KEY (source_db, code));
-CREATE TABLE holoo_mirror.voucher (source_db text, sanad_code int, number int, doc_date date, state text, comment text, removed_run text,
+CREATE TABLE holoo_mirror.voucher (source_db text, sanad_code int, number int, number2 int DEFAULT 0, doc_date date, state text, comment text, removed_run text,
   PRIMARY KEY (source_db, sanad_code));
 CREATE TABLE holoo_mirror.voucher_line (source_db text, sanad_code int, line_index int, account_code text, debit numeric, credit numeric,
   description text, in_ledger boolean, removed_run text);

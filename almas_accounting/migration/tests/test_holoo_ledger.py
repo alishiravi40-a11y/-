@@ -97,3 +97,44 @@ def test_posted_migrated_entries_are_immutable(db):
     M.migrate(db, DB, "1404")
     with pytest.raises(psycopg.errors.RaiseException, match="immutable"):
         db.execute("UPDATE core.journal_line SET debit = 1 WHERE entry_id = (SELECT entry_id FROM core.legacy_entry_map WHERE sanad_code = 2)")
+
+
+def test_holoo_sub_numbered_vouchers_keep_the_pair_and_holoo_order(db):
+    """FY1405 (E31): Holoo numbers vouchers (Sanad_Code_C, Sanad_Code_C2) and shows «C.C2» (dbo.RetSanadCode)."""
+    seed(db)
+    db.execute("UPDATE holoo_mirror.voucher SET number = sanad_code, number2 = 0")
+    db.execute("UPDATE holoo_mirror.voucher SET number = 10, number2 = 2, doc_date = '2025-04-10' WHERE sanad_code = 2")
+    db.execute("UPDATE holoo_mirror.voucher SET number = 10, number2 = 1, doc_date = '2025-04-10' WHERE sanad_code = 3")
+    st = M.migrate(db, DB, "1404")
+    assert st["entries_created"] == 4 and M.parity(db, DB)["status"] == "pass"
+    shown = dict(db.execute("SELECT split_part(source_ref, ':', 2)::int, number_display FROM core.journal_entry").fetchall())
+    assert shown[2] == "10.2" and shown[3] == "10.1" and shown[5] == "5"
+    # the ledger follows Holoo's order: 10.1 before 10.2 on the same day, although 10.2 was entered first
+    cust = db.execute("SELECT id FROM core.account WHERE code = '1030008'").fetchone()[0]
+    rows = db.execute("SELECT number_display FROM core.account_ledger('1404', %s, NULL, '2025-03-21', '2026-03-20') WHERE entry_id IS NOT NULL", (cust,)).fetchall()
+    assert [r[0] for r in rows][:2] == ["10.1", "10.2"]
+    assert [r[0] for r in db.execute("SELECT number_display FROM core.journal_list('2025-03-21', '2026-03-20', '10.2')")] == ["10.2"]
+    assert {r[2] for r in db.execute("SELECT * FROM core.global_search('10')") if r[0] == "entry"} == {"سند 10.1", "سند 10.2"}
+    assert M.migrate(db, DB, "1404")["entries_created"] == 0                      # idempotent
+
+
+def test_a_repeated_holoo_voucher_number_stops_the_import_with_the_numbers(db):
+    seed(db)
+    db.execute("UPDATE holoo_mirror.voucher SET number = 7, number2 = 1 WHERE sanad_code IN (2, 3)")
+    with pytest.raises(RuntimeError, match=r"repeated.*'7\.1'"):
+        M.migrate(db, DB, "1404")
+    assert db.execute("SELECT count(*) FROM core.journal_entry").fetchone()[0] == 0
+
+
+def test_native_vouchers_have_no_sub_number_and_the_pair_is_unique(db):
+    M.ensure_fiscal_year(db, "1405")
+    db.execute("INSERT INTO core.account (code, name, level, is_leaf, nature, statement) VALUES ('1', 'a', 1, true, 'debit', 'balance_sheet'), ('2', 'b', 1, true, 'credit', 'balance_sheet')")
+    fy, per = db.execute("SELECT fiscal_year_id, id FROM core.period ORDER BY starts_on LIMIT 1").fetchone()
+    def entry(number, sub):
+        return db.execute("INSERT INTO core.journal_entry (number, number_sub, fiscal_year_id, period_id, effective_date, created_by) VALUES (%s, %s, %s, %s, '2026-03-25', 't') RETURNING number_display",
+                          (number, sub, fy, per)).fetchone()[0]
+    assert entry(8, 0) == "8" and entry(8, 1) == "8.1"
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        entry(8, 1)
+    with pytest.raises(psycopg.errors.CheckViolation):
+        entry(None, 2)
